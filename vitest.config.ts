@@ -1,16 +1,16 @@
 /// <reference types="vite-plus" />
 import { getViteConfig } from "astro/config";
-import { resolveTheme } from "./scripts/theme/themes.mjs";
-import { themeCssPath, writeThemeArtifacts } from "./scripts/theme/theme-css.mjs";
+import { resolveTheme } from "./scripts/theme/themes.ts";
+import { themeCssPath, writeThemeArtifacts } from "./scripts/theme/theme-css.ts";
 
 // Astro-aware but config-file-free. `getViteConfig` is what compiles `.astro`
 // components, so storefront presentation contracts can be rendered through
 // AstroContainer instead of only through a built Worker. `configFile: false`
-// keeps astro.config.mjs — and with it the Cloudflare adapter and its bindings —
+// keeps astro.config.ts — and with it the Cloudflare adapter and its bindings —
 // out of the unit suite, which is what the previous standalone `defineConfig`
 // was protecting. Pure-function tests still run in plain Node.
 //
-// Because astro.config.mjs is skipped, the #theme alias it declares does
+// Because astro.config.ts is skipped, the #theme alias it declares does
 // NOT exist here. It has to be resolved again from the same helper, or the
 // contract suite would test whichever theme happens to be first on disk instead
 // of the selected one. Run one theme per process (THEME=<id> vitest run):
@@ -21,7 +21,7 @@ import { themeCssPath, writeThemeArtifacts } from "./scripts/theme/theme-css.mjs
 // standalone commands (test:storefront-contract, test:watch) would otherwise
 // die collecting tests with "Tsconfig not found". Safe to run from any number
 // of concurrent processes — writes are deterministic and idempotent (see the
-// design rule in scripts/theme/theme-css.mjs).
+// design rule in scripts/theme/theme-css.ts).
 writeThemeArtifacts();
 const theme = resolveTheme();
 
@@ -29,14 +29,10 @@ export default getViteConfig(
   {
     test: {
       environment: "node",
-      include: [
-        "src/**/*.test.ts",
-        "tests/storefront/**/*.test.{ts,mjs}",
-        "tests/scripts/**/*.test.mjs",
-      ],
+      include: ["src/**/*.test.ts", "tests/storefront/**/*.test.ts", "tests/scripts/**/*.test.ts"],
       alias: {
         "#theme": theme.dir,
-        // Mirrors astro.config.mjs: if a test ever renders something that
+        // Mirrors astro.config.ts: if a test ever renders something that
         // pulls global.css, the CSS import resolves to the same per-theme file.
         "#theme-css": themeCssPath(theme.id),
         // Lets pure-function modules that merely read deployment vars at import

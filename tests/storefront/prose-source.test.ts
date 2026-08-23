@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vite-plus/test";
 import { readFileSync } from "node:fs";
 
-// Deliberately .mjs: reads source files, and tsconfig.compilerOptions.types is
-// pinned to the Cloudflare types. Same reason as boundary.test.mjs.
+// Deliberately .ts: reads source files, and tsconfig.compilerOptions.types is
+// pinned to the Cloudflare types. Same reason as boundary.test.ts.
 //
 // These assertions exist because the HTML baselines cannot see them. The prose
 // scale is a CSS-only contract: tokenizing it changes no markup at all, so the
 // equivalence gate passes whether the rules read a token, read the wrong token,
 // or lost their fallback.
 
-import { discoverThemeIds, THEMES_DIR } from "../../scripts/theme/themes.mjs";
+import { discoverThemeIds, THEMES_DIR } from "../../scripts/theme/themes.ts";
 
 const global = readFileSync("src/styles/global.css", "utf8");
 // Structural rules moved to base.css so the Admin entry can share them without
@@ -128,7 +128,7 @@ const REQUIRED_THEME_TOKENS = [
  *  a token named in a comment, or declared in :root, generates nothing, so it
  *  must not satisfy the contract. Brace-matched rather than regexed to the
  *  first `}` so a nested block cannot truncate the scan. */
-function themeBlockDeclarations(css) {
+function themeBlockDeclarations(css: string) {
   const noComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
   let out = "";
   let from = 0;

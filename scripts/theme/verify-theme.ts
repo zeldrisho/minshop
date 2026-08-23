@@ -6,7 +6,7 @@
  * A script rather than a `&&` chain for one reason: `astro check` must be
  * told which theme to type-check. Its default tsconfig follows
  * config/theme.config.json — deliberately, so an env-selected process never
- * rewrites the shared file (see scripts/theme/theme-css.mjs) — which means the
+ * rewrites the shared file (see scripts/theme/theme-css.ts) — which means the
  * env-selected check has to pass its per-theme tsconfig explicitly, and
  * package scripts cannot interpolate the resolved id portably.
  *
@@ -16,8 +16,8 @@
  */
 import { spawnSync } from "node:child_process";
 import { relative } from "node:path";
-import { resolveTheme } from "./themes.mjs";
-import { themeTsconfigPath, writeThemeArtifacts } from "./theme-css.mjs";
+import { resolveTheme } from "./themes.ts";
+import { themeTsconfigPath, writeThemeArtifacts } from "./theme-css.ts";
 
 writeThemeArtifacts();
 const { id, source } = resolveTheme();
@@ -28,7 +28,7 @@ const steps: [string, string[]][] = [
   ["vp", ["exec", "vitest", "run", "tests/storefront"]],
   ["vp", ["exec", "astro", "check", "--tsconfig", tsconfig]],
   ["vp", ["exec", "astro", "build"]],
-  ["node", ["scripts/check/check-built-css.mjs"]],
+  ["node", ["scripts/check/check-built-css.ts"]],
 ];
 
 for (const [cmd, args] of steps) {

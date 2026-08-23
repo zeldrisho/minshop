@@ -6,11 +6,11 @@
  * verify chain — a customized storefront is expected to fail it. See
  * vp run test:storefront-contract for the checks that survive a redesign.
  *
- * Usage: node tests/helpers/baselines.mjs <port> [--update]
+ * Usage: node tests/helpers/baselines.ts <port> [--update]
  */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { normalizeHeaders, normalizeHtml } from "./normalize-html.mjs";
+import { normalizeHeaders, normalizeHtml } from "./normalize-html.ts";
 
 const BASELINE_DIR = "tests/baselines/storefront";
 
@@ -85,14 +85,14 @@ export const ROUTES = [
  * (the cookie is application-owned; forging it would test a shape rather than
  * the contract) and reuse its cookie for those routes.
  */
-async function cartCookie(origin) {
+async function cartCookie(origin: string): Promise<string> {
   const catalog = await fetch(new URL("/api/products?limit=50", origin), {
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
-  const { products } = await catalog.json();
+  const { products }: { products: any[] } = await catalog.json();
   // A product WITH variants requires one to be chosen, and `add` redirects back
   // to the product page instead of setting a cookie. Pick a plain, in-stock line.
-  const productId = products?.find((p) => p.variant_label === null && p.in_stock)?.id;
+  const productId = products?.find((p: any) => p.variant_label === null && p.in_stock)?.id;
   if (!productId) {
     throw new Error("baseline fixture has no variant-free, in-stock product to add to the cart");
   }
@@ -117,7 +117,7 @@ async function cartCookie(origin) {
   return cookies;
 }
 
-async function capture(origin, route, cookie) {
+async function capture(origin: string, route: any, cookie?: string) {
   const response = await fetch(new URL(route.path, origin), {
     redirect: "manual",
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -135,7 +135,7 @@ async function capture(origin, route, cookie) {
 
 /** First differing line, with context — a full diff of a 400-line document
  *  buries the signal. */
-function firstDifference(expected, actual) {
+function firstDifference(expected: string, actual: string) {
   const a = expected.split("\n");
   const b = actual.split("\n");
   for (let i = 0; i < Math.max(a.length, b.length); i += 1) {

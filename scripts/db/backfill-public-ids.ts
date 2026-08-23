@@ -6,9 +6,9 @@
 // reads/writes go through `vp exec wrangler d1 execute DB` as a child process —
 // the repository's established transport — never the raw Cloudflare API.
 //
-//   node --experimental-strip-types scripts/db/backfill-public-ids.mjs --local
-//   node --experimental-strip-types scripts/db/backfill-public-ids.mjs --remote
-//   node --experimental-strip-types scripts/db/backfill-public-ids.mjs --local --check
+//   node --experimental-strip-types scripts/db/backfill-public-ids.ts --local
+//   node --experimental-strip-types scripts/db/backfill-public-ids.ts --remote
+//   node --experimental-strip-types scripts/db/backfill-public-ids.ts --local --check
 //
 // Behavior:
 //   - fills ONLY NULL public_id columns; never touches an existing value
@@ -26,6 +26,7 @@ import {
   generatePublicId,
   parsePublicId,
   isLegacyPublicId,
+  type PublicIdKind,
 } from "../../src/features/ids/publicId.ts";
 import { orderNumber } from "../../src/features/orders/number.ts";
 import { storeOverrides } from "../../src/store.config.ts";
@@ -35,7 +36,7 @@ const remote = args.includes("--remote");
 const local = args.includes("--local");
 const checkOnly = args.includes("--check");
 if (remote === local) {
-  console.error("usage: backfill-public-ids.mjs (--local | --remote) [--check]");
+  console.error("usage: backfill-public-ids.ts (--local | --remote) [--check]");
   process.exit(2);
 }
 const mode = remote ? "--remote" : "--local";
@@ -52,7 +53,7 @@ const orderNumberCfg = {
 };
 
 /** [table, kind] for every covered table whose rows may predate 0033. */
-const TABLES = [
+const TABLES: [string, PublicIdKind][] = [
   ["products", "product"],
   ["product_variants", "variant"],
   ["product_extras", "extra"],
@@ -66,22 +67,22 @@ const TABLES = [
   ["order_items", "orderItem"],
 ];
 
-function d1(sql) {
+function d1(sql: string) {
   const out = execFileSync(
     "vp",
     ["exec", "wrangler", "d1", "execute", "DB", mode, "--json", "--command", sql],
     { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
   );
-  const parsed = JSON.parse(out);
+  const parsed: any = JSON.parse(out);
   // wrangler --json returns an array of result sets, one per statement.
   return parsed;
 }
 
-const rows = (result) => result?.[0]?.results ?? [];
+const rows = (result: any): any[] => result?.[0]?.results ?? [];
 
-const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
+const q = (s: unknown) => `'${String(s).replace(/'/g, "''")}'`;
 
-async function backfillTable(table, kind) {
+async function backfillTable(table: string, kind: PublicIdKind) {
   let lastId = 0;
   let filled = 0;
   for (;;) {
@@ -95,7 +96,7 @@ async function backfillTable(table, kind) {
     for (let attempt = 0; ; attempt++) {
       const updates = pending
         .map(
-          (r) =>
+          (r: any) =>
             `UPDATE ${table} SET public_id = ${q(generatePublicId(kind))} WHERE id = ${r.id} AND public_id IS NULL;`,
         )
         .join("\n");
@@ -130,7 +131,7 @@ function backfillAliases() {
     );
     if (legacy.length === 0) break;
     const inserts = legacy
-      .map((r) => {
+      .map((r: any) => {
         const ref = String(orderNumber(r.id, orderNumberCfg));
         return `INSERT OR IGNORE INTO order_reference_aliases (reference, order_public_id) VALUES (${q(ref)}, ${q(r.public_id)});`;
       })

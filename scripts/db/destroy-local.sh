@@ -18,7 +18,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 D1=".wrangler/state/v3/d1"
 R2=".wrangler/state/v3/r2"

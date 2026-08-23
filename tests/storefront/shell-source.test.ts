@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vite-plus/test";
 import { readFileSync } from "node:fs";
 
-// Deliberately .mjs: reading source files needs node types, and
+// Deliberately .ts: reading source files needs node types, and
 // tsconfig.compilerOptions.types is pinned to the Cloudflare types. Same reason
-// as boundary.test.mjs — see its note.
+// as boundary.test.ts — see its note.
 //
 // These are source-level assertions because Layout.astro cannot be rendered
 // through AstroContainer: it reads request context and runtime bindings. They
@@ -20,7 +20,7 @@ import { readFileSync } from "node:fs";
  * user data — but this is a few lines, is genuinely more correct, and leaves no
  * tag-filtering regex for someone to copy somewhere it WOULD matter.
  */
-function withoutScripts(html) {
+function withoutScripts(html: string) {
   let out = "";
   let cursor = 0;
   for (;;) {

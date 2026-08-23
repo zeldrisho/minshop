@@ -26,7 +26,7 @@
  */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
-import { THEMES_DIR, discoverThemeIds, resolveTheme } from "../theme/themes.mjs";
+import { THEMES_DIR, discoverThemeIds, resolveTheme } from "../theme/themes.ts";
 
 const root = process.cwd();
 
@@ -38,8 +38,8 @@ const CLASS_ATTR = /class(?:Name)?=(?:"([^"]*)"|\{`([^`]*)`\})/g;
 // interpolation fragments, no quotes from ternaries.
 const PLAIN_CLASS = /^[a-z][a-zA-Z0-9:/[\]().,%_'-]*$/;
 
-function classesIn(file) {
-  const out = new Set();
+function classesIn(file: string): Set<string> {
+  const out = new Set<string>();
   const source = readFileSync(file, "utf8");
   for (const match of source.matchAll(CLASS_ATTR)) {
     for (const token of (match[1] ?? match[2] ?? "").split(/\s+/)) {
@@ -49,9 +49,9 @@ function classesIn(file) {
   return out;
 }
 
-function classesUnder(dir) {
-  const out = new Set();
-  const walk = (d) => {
+function classesUnder(dir: string): Set<string> {
+  const out = new Set<string>();
+  const walk = (d: string) => {
     for (const entry of readdirSync(d, { withFileTypes: true })) {
       const path = join(d, entry.name);
       if (entry.isDirectory()) {
@@ -70,10 +70,13 @@ function classesUnder(dir) {
  *  attributes — a token counts as "unique to a theme" only if it appears
  *  nowhere else in src in any form, or the compiled output will legitimately
  *  contain it in every build and the check cries wolf. */
-function rawContentUnder(dir, { skipDirs = [] } = {}) {
+function rawContentUnder(
+  dir: string,
+  { skipDirs = [] as string[] }: { skipDirs?: string[] } = {},
+): string {
   const skips = skipDirs.map((d) => resolve(d));
   let out = "";
-  const walk = (d) => {
+  const walk = (d: string) => {
     for (const entry of readdirSync(d, { withFileTypes: true })) {
       const path = join(d, entry.name);
       if (entry.isDirectory()) {
@@ -90,7 +93,7 @@ function rawContentUnder(dir, { skipDirs = [] } = {}) {
 }
 
 /** The compiled form of a class name inside a CSS selector. */
-function cssEscaped(name) {
+function cssEscaped(name: string): string {
   return name.replace(/[^a-zA-Z0-9-]/g, (ch) => `\\${ch}`);
 }
 
@@ -99,18 +102,20 @@ function cssEscaped(name) {
 
 const ids = discoverThemeIds(root);
 const active = resolveTheme(root);
-const themeClasses = new Map(ids.map((id) => [id, classesUnder(resolve(root, THEMES_DIR, id))]));
+const themeClasses = new Map<string, Set<string>>(
+  ids.map((id) => [id, classesUnder(resolve(root, THEMES_DIR, id))]),
+);
 // One haystack per theme: all of src EXCEPT that theme's own directory.
-const srcExceptTheme = new Map(
+const srcExceptTheme = new Map<string, string>(
   ids.map((id) => [
     id,
     rawContentUnder(resolve(root, "src"), { skipDirs: [resolve(root, THEMES_DIR, id)] }),
   ]),
 );
 
-function uniqueTo(id) {
-  const haystack = srcExceptTheme.get(id);
-  return [...themeClasses.get(id)].filter((c) => !haystack.includes(c));
+function uniqueTo(id: string): string[] {
+  const haystack = srcExceptTheme.get(id)!;
+  return [...themeClasses.get(id)!].filter((c) => !haystack.includes(c));
 }
 
 // ---------------------------------------------------------------------------
@@ -121,8 +126,8 @@ if (!existsSync(distDir)) {
   console.error("check-built-css: no dist/. Run `astro build` first.");
   process.exit(1);
 }
-const cssFiles = [];
-const findCss = (d) => {
+const cssFiles: string[] = [];
+const findCss = (d: string) => {
   for (const entry of readdirSync(d, { withFileTypes: true })) {
     const path = join(d, entry.name);
     if (entry.isDirectory()) findCss(path);
@@ -134,9 +139,9 @@ if (cssFiles.length === 0) {
   console.error("check-built-css: dist/ contains no stylesheets.");
   process.exit(1);
 }
-const css = new Map(cssFiles.map((f) => [f, readFileSync(f, "utf8")]));
+const css = new Map<string, string>(cssFiles.map((f) => [f, readFileSync(f, "utf8")]));
 
-const failures = [];
+const failures: string[] = [];
 
 // 0. Classify each stylesheet by its ENTRY MARKER, never by the content under
 //    test. Classifying by sentinel utilities has a hole exactly where the
@@ -144,7 +149,7 @@ const failures = [];
 //    make it look like a storefront sheet and be skipped by the isolation
 //    assertions. The markers are emitted by the entries themselves
 //    (src/styles/global.css and admin.css).
-const entryOf = (body) => {
+const entryOf = (body: string) => {
   const admin = body.includes("--minshop-css-entry:admin");
   const storefront = body.includes("--minshop-css-entry:storefront");
   if (admin && storefront) return "both";
@@ -152,10 +157,10 @@ const entryOf = (body) => {
   if (storefront) return "storefront";
   return "unmarked"; // e.g. a component-scoped chunk
 };
-const adminFiles = [];
-const storefrontFiles = [];
+const adminFiles: string[] = [];
+const storefrontFiles: string[] = [];
 for (const f of cssFiles) {
-  const entry = entryOf(css.get(f));
+  const entry = entryOf(css.get(f)!);
   if (entry === "both") {
     failures.push(
       `${relative(root, f)}: carries BOTH entry markers — the Admin and storefront entries were merged into one stylesheet, so Admin cannot be isolated.`,
@@ -177,7 +182,7 @@ if (storefrontFiles.length === 0) {
 // 1a. The active theme is actually in the storefront output.
 const activeCandidates = uniqueTo(active.id);
 const activeHits = activeCandidates.filter((c) =>
-  storefrontFiles.some((f) => css.get(f).includes(cssEscaped(c))),
+  storefrontFiles.some((f) => css.get(f)!.includes(cssEscaped(c))),
 );
 if (activeCandidates.length === 0) {
   // No silent caps: a theme whose every class overlaps its siblings cannot be
@@ -197,7 +202,7 @@ for (const id of ids) {
   if (id === active.id) continue;
   for (const c of uniqueTo(id)) {
     for (const f of cssFiles) {
-      if (css.get(f).includes(cssEscaped(c))) {
+      if (css.get(f)!.includes(cssEscaped(c))) {
         failures.push(
           `inactive theme "${id}": utility "${c}" leaked into ${relative(root, f)} — its exclusion is broken.`,
         );
@@ -210,7 +215,7 @@ for (const id of ids) {
 //     markers exist for. The Admin entry excludes every theme, active included.
 for (const c of activeCandidates) {
   for (const f of adminFiles) {
-    if (css.get(f).includes(cssEscaped(c))) {
+    if (css.get(f)!.includes(cssEscaped(c))) {
       failures.push(
         `active theme "${active.id}": utility "${c}" leaked into the Admin stylesheet ${relative(root, f)}.`,
       );
@@ -226,7 +231,7 @@ const activeTheme = readFileSync(resolve(root, THEMES_DIR, active.id, "tokens.cs
 const activePaper = activeTheme.match(/--color-paper:\s*([^;]+);/)?.[1].trim();
 if (!adminPaper) failures.push("src/styles/admin.css declares no --color-paper.");
 for (const f of adminFiles) {
-  const body = css.get(f);
+  const body = css.get(f)!;
   if (adminPaper && !body.includes(`--color-paper:${adminPaper}`)) {
     failures.push(`${relative(root, f)}: Admin entry lost its own paper (${adminPaper}).`);
   }

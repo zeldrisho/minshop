@@ -2,8 +2,8 @@
 /**
  * Demo: an agent shops the store over the public catalog API.
  *
- *   node scripts/check/agent-demo.mjs <base-url> "<query>" [maxPrice]
- *   node scripts/check/agent-demo.mjs https://your-store.example.com "warm hat" 40
+ *   node scripts/check/agent-demo.ts <base-url> "<query>" [maxPrice]
+ *   node scripts/check/agent-demo.ts https://your-store.example.com "warm hat" 40
  *
  * Browses GET /api/products?q=…, picks the most relevant in-stock match within
  * the budget (search already ranks by relevance), then POST /api/checkout with
@@ -16,18 +16,18 @@
 import { writeFile } from "node:fs/promises";
 const [base, query = "warm hat", maxPrice] = process.argv.slice(2);
 if (!base) {
-  console.error('Usage: node scripts/check/agent-demo.mjs <base-url> "<query>" [maxPrice]');
+  console.error('Usage: node scripts/check/agent-demo.ts <base-url> "<query>" [maxPrice]');
   process.exit(1);
 }
 const budget = maxPrice ? Number(maxPrice) : Infinity;
 
 // 1. Browse the catalog (semantic/keyword search).
-const { products = [] } = await fetch(
+const { products = [] } = (await fetch(
   `${base}/api/products?q=${encodeURIComponent(query)}&limit=20`,
-).then((r) => r.json());
+).then((r) => r.json())) as { products?: any[] };
 
 // 2. Pick: most relevant in-stock product within budget (keep search ranking).
-const candidates = products.filter((p) => p.in_stock && p.price.amount <= budget);
+const candidates: any[] = products.filter((p: any) => p.in_stock && p.price.amount <= budget);
 
 console.log(
   `Search "${query}"${Number.isFinite(budget) ? ` under ${budget}` : ""}: ${candidates.length} in-stock candidate(s)`,
@@ -49,7 +49,7 @@ const res = await fetch(`${base}/api/checkout`, {
   headers: { "content-type": "application/json" },
   body: JSON.stringify({ items: [{ product_id: pick.id, quantity: 1 }], method: "lightning" }),
 });
-const order = await res.json();
+const order: any = await res.json();
 if (!res.ok) {
   console.error("Checkout failed:", order.error);
   process.exit(1);
@@ -70,10 +70,10 @@ for (;;) {
     process.exit(2);
   }
   if (!response.ok) throw new Error(`Status request failed: ${response.status}`);
-  const status = await response.json();
+  const status: any = await response.json();
   console.log(`Status: ${status.status}`);
   if (status.status === "paid" || status.status === "refunded") {
-    const downloads = (status.items ?? []).filter((item) => item.download_url);
+    const downloads = (status.items ?? []).filter((item: any) => item.download_url);
     for (const [index, item] of downloads.entries()) {
       const fileResponse = await fetch(item.download_url);
       if (!fileResponse.ok) throw new Error(`Download failed: ${fileResponse.status}`);

@@ -13,7 +13,7 @@ set -euo pipefail
 SLUG="${1:-}"
 [[ -n "$SLUG" ]] || { echo "usage: scripts/db/destroy-cf.sh <slug>" >&2; exit 1; }
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 W="vp exec wrangler"
 DB_NAME="${SLUG}-db"
