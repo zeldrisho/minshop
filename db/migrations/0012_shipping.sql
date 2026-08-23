@@ -1,4 +1,4 @@
--- 0005: capture shipping on orders. Additive.
+-- 0012: capture shipping on orders. Additive.
 -- shipping_cents = amount charged for shipping (part of amount_total_cents).
 -- ship_address  = JSON snapshot of the shipping address collected at checkout.
 

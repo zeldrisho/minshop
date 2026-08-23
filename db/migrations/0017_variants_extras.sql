@@ -5,7 +5,10 @@
 -- extras    — checkbox add-ons: a price delta layered on top, NO stock of their own.
 -- products.variant_label — the variant group's display name (e.g. "Size").
 -- order_items.variant_id — which variant a line sold (for stock + the record;
---             selected extras are captured in the line name/price).
+--             selected extras are captured in the line name/price). Nullable:
+--             NULL = the line has no variant. The foreign key keeps a non-null
+--             value pointing at a real variant (D1 enforces declared FKs), so
+--             order items can never dangle.
 
 CREATE TABLE IF NOT EXISTS product_variants (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,4 +33,4 @@ CREATE TABLE IF NOT EXISTS product_extras (
 CREATE INDEX IF NOT EXISTS idx_extras_product ON product_extras(product_id, position);
 
 ALTER TABLE products ADD COLUMN variant_label TEXT;     -- NULL = no variant group
-ALTER TABLE order_items ADD COLUMN variant_id INTEGER;  -- NULL = no variant on the line
+ALTER TABLE order_items ADD COLUMN variant_id INTEGER REFERENCES product_variants(id);  -- NULL = no variant on the line

@@ -22,7 +22,12 @@ import {
   orderShippedEmail,
 } from "./orderConfirmation";
 import { guestLinkReissueEmail } from "./guestLinkReissue";
-import { guestOrderUrl, getGuestAccess, sweepAbandonedGuestAccess } from "../orders/guestAccess.ts";
+import {
+  guestOrderUrl,
+  getGuestAccess,
+  sweepAbandonedGuestAccess,
+  type GuestTokenKek,
+} from "../orders/guestAccess.ts";
 import { shouldSendCustomerOrderEmail } from "./orderPolicy";
 
 /**
@@ -80,6 +85,7 @@ export async function deliverOrderNotifications(
   orderId: number,
   origin: string,
   settings?: StoreSettings,
+  kek?: GuestTokenKek,
 ): Promise<void> {
   // Settings resolve once per delivery pass, at send time — a store that
   // enabled email after the order was placed still gets the sends.
@@ -142,12 +148,16 @@ export async function deliverOrderNotifications(
           continue;
         }
         // Customer email is an allowlisted token position (the ONLY delivery
-        // path for a reissued credential — admin output never shows it).
-        const msg = guestLinkReissueEmail(
-          order,
-          storeName,
-          `${origin}/order/${access.access_token}`,
-        );
+        // path for a reissued credential — admin output never shows it). The
+        // URL builder unseals the stored token for it; if the token cannot be
+        // recovered (no KEK configured), skip rather than email a linkless
+        // reissue — the row stays queued for a later pass that can.
+        const reissueUrl = await guestOrderUrl(db, order.public_id, origin, kek);
+        if (!reissueUrl) {
+          await markSkipped(db, orderId, kind, attempts);
+          continue;
+        }
+        const msg = guestLinkReissueEmail(order, storeName, reissueUrl);
         await emailer.send({ ...msg, idempotencyKey: `${kind}/${order.public_id ?? orderId}` });
         await markSent(db, orderId, kind, attempts);
         continue;
@@ -168,7 +178,7 @@ export async function deliverOrderNotifications(
         const msg = orderShippedEmail(
           order,
           storeName,
-          await guestOrderUrl(db, order.public_id, origin),
+          await guestOrderUrl(db, order.public_id, origin, kek),
         );
         await emailer.send({ ...msg, idempotencyKey: `${kind}/${order.public_id ?? orderId}` });
         await markSent(db, orderId, kind, attempts);
@@ -194,7 +204,7 @@ export async function deliverOrderNotifications(
               s.imageDelivery,
               // Tokenized guest link — customer email is an allowlisted token
               // position. The owner notification links to admin instead.
-              await guestOrderUrl(db, order.public_id, origin),
+              await guestOrderUrl(db, order.public_id, origin, kek),
             )
           : orderNotificationEmail(order, items, notifyTo!, origin, storeName, s.imageDelivery);
       // Keyed on public_id, not the row id: D1 ids restart per store, so two
@@ -219,7 +229,11 @@ export async function deliverOrderNotifications(
  *
  * @param origin - The request origin used when delivering recovered notifications
  */
-export async function sweepStaleNotifications(db: D1Database, origin: string): Promise<void> {
+export async function sweepStaleNotifications(
+  db: D1Database,
+  origin: string,
+  kek?: GuestTokenKek,
+): Promise<void> {
   // Piggyback the guest-credential reconciliation here too: same cadence and
   // the same bounded-work philosophy. Reached both from live settlements and
   // from the scheduled handler (src/worker.ts).
@@ -238,6 +252,6 @@ export async function sweepStaleNotifications(db: D1Database, origin: string): P
     )
     .all<{ order_id: number }>();
   for (const row of results ?? []) {
-    await deliverOrderNotifications(db, row.order_id, origin);
+    await deliverOrderNotifications(db, row.order_id, origin, undefined, kek);
   }
 }

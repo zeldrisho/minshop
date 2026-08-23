@@ -29,6 +29,9 @@ CREATE INDEX idx_shipping_label_attempts_order
 
 -- Preserve money-bearing rows created before this table existed. A legacy
 -- active row may predate claim tokens, so give it a deterministic audit token.
+-- Status carries over verbatim: purchased stays purchased, and a failed
+-- attempt (declined purchase) stays failed — recording it as refunded would
+-- fabricate a refund event that never happened.
 INSERT OR IGNORE INTO shipping_label_attempts (
   order_id, claim_token, outcome, shipment_id, rate_id, transaction_id,
   provider, service, amount_cents, tracking_number, label_url, error,
@@ -37,7 +40,7 @@ INSERT OR IGNORE INTO shipping_label_attempts (
 SELECT
   order_id,
   COALESCE(claim_token, 'legacy-order-' || order_id),
-  CASE WHEN status = 'purchased' THEN 'purchased' ELSE 'refunded' END,
+  status,
   shipment_id,
   rate_id,
   transaction_id,

@@ -78,6 +78,22 @@ export function isAccessToken(value: unknown): value is string {
 }
 
 /**
+ * One-way SHA-256 hex verifier for an access token — the only token-derived
+ * value stored for authorization lookup (order_guest_access.access_token_hash,
+ * migration 0041). Incoming presented tokens are hashed the same way before
+ * comparison; the raw bearer value itself is never persisted (it is sealed
+ * under a Worker secret when later customer emails must regenerate the URL).
+ * Pure WebCrypto → unit-testable.
+ *
+ * @param token - The raw access token to hash
+ * @returns The lowercase hex SHA-256 digest of the token
+ */
+export async function hashAccessToken(token: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
  * Redacts access-token-shaped substrings from text.
  *
  * @param text - The text containing potential access tokens

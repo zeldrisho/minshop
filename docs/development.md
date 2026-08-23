@@ -80,7 +80,7 @@ vp run provision:cf my-store
 - New payment rails = one adapter implementing `PaymentProvider` + factory wiring.
 - New tests ride along with behavior changes.
 - Run `vp run verify` after every meaningful edit; run `git diff --check` + `git status --short` before handoff.
-- Migrations: `vp exec wrangler d1 migrations create minshop-db <name>` → move to `db/migrations/` → edit → `vp run db:migrate`.
+- Migrations: `vp exec wrangler d1 migrations create minshop-db <name>` → edit the generated file directly in `db/migrations/` → `vp run db:migrate`.
 
 ## Gotchas
 
