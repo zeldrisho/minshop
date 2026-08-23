@@ -17,7 +17,6 @@ function unwrapExpression(expression: ESTree.Expression): ESTree.Expression {
 	while (
 		current.type === "ParenthesizedExpression" ||
 		current.type === "TSAsExpression" ||
-		current.type === "TSSatisfiesExpression" ||
 		current.type === "TSTypeAssertion" ||
 		current.type === "TSNonNullExpression"
 	) {
@@ -152,6 +151,7 @@ export const noKnownValueWideningRule = defineRule({
 			subject: string,
 		) => {
 			if (destination === null) return;
+			if (expression.type === "TSSatisfiesExpression") return;
 			if (
 				isDictionaryAccumulatorTarget(destination) &&
 				isEmptyObjectExpression(expression)

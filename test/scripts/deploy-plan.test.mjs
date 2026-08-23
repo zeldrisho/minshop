@@ -183,8 +183,8 @@ describe("deploy.mjs stays on the executor", () => {
     const opsStart = source.indexOf("const ops = {");
     expect(opsStart).toBeGreaterThan(-1);
     const opsBlock = source.slice(opsStart, source.indexOf("executeDeployPlan(", opsStart));
-    const wranglerCalls = source.match(/'wrangler'/g) ?? [];
-    const inOps = opsBlock.match(/'wrangler'/g) ?? [];
+    const wranglerCalls = source.match(/['"]wrangler['"]/g) ?? [];
+    const inOps = opsBlock.match(/['"]wrangler['"]/g) ?? [];
     expect(wranglerCalls.length).toBeGreaterThan(0);
     expect(wranglerCalls.length).toBe(inOps.length);
   });

@@ -469,6 +469,7 @@ export function isPopulatedObjectExpression(expression: ESTree.Expression): bool
 	while (
 		current.type === "ParenthesizedExpression" ||
 		current.type === "TSAsExpression" ||
+		current.type === "TSSatisfiesExpression" ||
 		current.type === "TSTypeAssertion" ||
 		current.type === "TSNonNullExpression"
 	) {
@@ -483,11 +484,11 @@ export function isKnownEvidenceExpression(expression: ESTree.Expression): boolea
 		current.type === "ParenthesizedExpression" ||
 		current.type === "TSAsExpression" ||
 		current.type === "TSTypeAssertion" ||
-		current.type === "TSNonNullExpression" ||
-		current.type === "TSSatisfiesExpression"
+		current.type === "TSNonNullExpression"
 	) {
 		current = current.expression;
 	}
+	if (current.type === "TSSatisfiesExpression") return true;
 	if (current.type === "ObjectExpression") return true;
 	return (
 		current.type === "ArrayExpression" ||
