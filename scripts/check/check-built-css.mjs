@@ -26,7 +26,7 @@
  */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
-import { THEMES_DIR, discoverThemeIds, resolveTheme } from "./themes.mjs";
+import { THEMES_DIR, discoverThemeIds, resolveTheme } from "../theme/themes.mjs";
 
 const root = process.cwd();
 

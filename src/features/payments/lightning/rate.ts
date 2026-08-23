@@ -4,7 +4,7 @@
  * price at invoice time. Cached briefly per-currency to avoid a price call on
  * every checkout. Source is config-driven (default Coinbase spot — no API key).
  */
-import { minorUnitsPerMajor } from "../../../money";
+import { minorUnitsPerMajor } from "../../../lib/money";
 
 interface CachedRate {
   fiatPerBtc: number;

@@ -2,7 +2,7 @@ import type { D1Database } from "@cloudflare/workers-types";
 import { listProducts, countProducts } from "../products/db";
 import { listCategories, childrenOf } from "../categories/db";
 import { orderByClause, parseStoreSortQuery, STORE_SORTS } from "../products/sort";
-import { MAX_PUBLIC_PAGE, paginate, queryHref } from "../../pagination";
+import { MAX_PUBLIC_PAGE, paginate, queryHref } from "../../lib/pagination";
 import { addCacheTags, productCacheTags } from "../cache/tags";
 import type { ImageDelivery } from "../products/image";
 import { buildProductCard } from "./productCard";

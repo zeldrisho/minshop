@@ -269,11 +269,11 @@ export function getConfig(): SiteConfig {
   return (configCache ??= deepMerge<SiteConfig>(defaultConfig(), storeOverrides));
 }
 
-// Currency scaling lives in the dependency-free ./money module (so unit-tested
+// Currency scaling lives in the dependency-free ./lib/money module (so unit-tested
 // code can use it without the Cloudflare runtime). Re-exported here as the app's
 // single money entry point.
-export { currencyDecimals, minorUnitsPerMajor, toMinorUnits, toMajorUnits } from "./money";
-import { formatMoney } from "./money";
+export { currencyDecimals, minorUnitsPerMajor, toMinorUnits, toMajorUnits } from "./lib/money";
+import { formatMoney } from "./lib/money";
 
 /**
  * Format integer minor units as a localized price string. Defaults to the store

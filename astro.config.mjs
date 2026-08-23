@@ -1,8 +1,8 @@
 import { defineConfig } from "astro/config";
 import cloudflare from "@astrojs/cloudflare";
 import tailwindcss from "@tailwindcss/vite";
-import { resolveTheme } from "./scripts/themes.mjs";
-import { themeCssPath, writeThemeArtifacts } from "./scripts/theme-css.mjs";
+import { resolveTheme } from "./scripts/theme/themes.mjs";
+import { themeCssPath, writeThemeArtifacts } from "./scripts/theme/theme-css.mjs";
 
 // SSR on Cloudflare Workers. platformProxy lets `astro dev` read bindings
 // (D1, R2, vars) from wrangler.jsonc locally.
@@ -15,7 +15,7 @@ import { themeCssPath, writeThemeArtifacts } from "./scripts/theme-css.mjs";
 // an unstyled or wrongly styled site. The generated files are written for ALL
 // themes and are byte-identical no matter which theme this process selected, so a
 // concurrent build for another theme cannot fight a running dev server over
-// them (see the design rule in scripts/theme-css.mjs).
+// them (see the design rule in scripts/theme/theme-css.mjs).
 const theme = resolveTheme();
 writeThemeArtifacts();
 

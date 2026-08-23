@@ -7,7 +7,7 @@ import type {
 } from "./provider";
 import { OPENNODE_CHECKOUT_TTL_SECONDS } from "./provider";
 import { createPendingPayment, getPendingByHash, pendingToPaidOrder } from "./lightning/pending";
-import { toMajorUnits } from "../../money";
+import { toMajorUnits } from "../../lib/money";
 
 /**
  * OpenNode — hosted Lightning checkout (custodial processor). Behaves like Stripe:

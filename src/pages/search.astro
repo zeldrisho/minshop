@@ -6,7 +6,7 @@ import { productsInSharedCategories } from '../features/categories/db';
 import ProductCard from '#theme/ProductCard.astro';
 import { buildProductCard } from '../features/storefront/productCard';
 import { getConfig } from '../config';
-import { MAX_PUBLIC_PAGE, paginate, queryHref, requestedPage } from '../pagination';
+import { MAX_PUBLIC_PAGE, paginate, queryHref, requestedPage } from '../lib/pagination';
 import Pagination from '../components/Pagination.astro';
 import { normalizeSearchQuery } from '../features/search/query';
 import { addCacheTags, productCacheTags } from '../features/cache/tags';

@@ -11,7 +11,7 @@ const run = promisify(execFile);
 
 async function check(...paths) {
   try {
-    const { stdout } = await run("node", ["scripts/check-themes.mjs", ...paths]);
+    const { stdout } = await run("node", ["scripts/theme/check-themes.mjs", ...paths]);
     return { ok: true, output: stdout };
   } catch (error) {
     const failure = error;

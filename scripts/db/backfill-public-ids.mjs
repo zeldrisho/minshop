@@ -6,9 +6,9 @@
 // reads/writes go through `vp exec wrangler d1 execute DB` as a child process —
 // the repository's established transport — never the raw Cloudflare API.
 //
-//   node --experimental-strip-types scripts/backfill-public-ids.mjs --local
-//   node --experimental-strip-types scripts/backfill-public-ids.mjs --remote
-//   node --experimental-strip-types scripts/backfill-public-ids.mjs --local --check
+//   node --experimental-strip-types scripts/db/backfill-public-ids.mjs --local
+//   node --experimental-strip-types scripts/db/backfill-public-ids.mjs --remote
+//   node --experimental-strip-types scripts/db/backfill-public-ids.mjs --local --check
 //
 // Behavior:
 //   - fills ONLY NULL public_id columns; never touches an existing value
@@ -22,9 +22,13 @@
 //     malformed, or duplicate ID or alias.
 
 import { execFileSync } from "node:child_process";
-import { generatePublicId, parsePublicId, isLegacyPublicId } from "../src/features/ids/publicId.ts";
-import { orderNumber } from "../src/features/orders/number.ts";
-import { storeOverrides } from "../src/store.config.ts";
+import {
+  generatePublicId,
+  parsePublicId,
+  isLegacyPublicId,
+} from "../../src/features/ids/publicId.ts";
+import { orderNumber } from "../../src/features/orders/number.ts";
+import { storeOverrides } from "../../src/store.config.ts";
 
 const args = process.argv.slice(2);
 const remote = args.includes("--remote");

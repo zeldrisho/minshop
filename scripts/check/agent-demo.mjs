@@ -2,8 +2,8 @@
 /**
  * Demo: an agent shops the store over the public catalog API.
  *
- *   node scripts/agent-demo.mjs <base-url> "<query>" [maxPrice]
- *   node scripts/agent-demo.mjs https://your-store.example.com "warm hat" 40
+ *   node scripts/check/agent-demo.mjs <base-url> "<query>" [maxPrice]
+ *   node scripts/check/agent-demo.mjs https://your-store.example.com "warm hat" 40
  *
  * Browses GET /api/products?q=…, picks the most relevant in-stock match within
  * the budget (search already ranks by relevance), then POST /api/checkout with
@@ -16,7 +16,7 @@
 import { writeFile } from "node:fs/promises";
 const [base, query = "warm hat", maxPrice] = process.argv.slice(2);
 if (!base) {
-  console.error('Usage: node scripts/agent-demo.mjs <base-url> "<query>" [maxPrice]');
+  console.error('Usage: node scripts/check/agent-demo.mjs <base-url> "<query>" [maxPrice]');
   process.exit(1);
 }
 const budget = maxPrice ? Number(maxPrice) : Infinity;

@@ -1,5 +1,5 @@
 import type { ProductFields } from "./db";
-import { toMinorUnits } from "../../money";
+import { toMinorUnits } from "../../lib/money";
 import { toGrams, type WeightUnit } from "../shipping/weight";
 
 export interface ProductFormOptions {
