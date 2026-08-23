@@ -1,4 +1,4 @@
-import type { DeepPartial, SiteConfig } from './config';
+import type { DeepPartial, SiteConfig } from "./config";
 
 /**
  * YOUR store's settings — the one config file you edit. List ONLY what you

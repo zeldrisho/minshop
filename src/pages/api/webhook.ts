@@ -1,8 +1,8 @@
-import type { APIRoute } from 'astro';
-import { env } from 'cloudflare:workers';
-import { getPaymentProvider, defaultMethod } from '../../features/payments';
-import { getStoreSettings } from '../../features/settings/db';
-import { recordPaidWebhookOrder } from '../../features/orders/recordWebhook';
+import type { APIRoute } from "astro";
+import { env } from "cloudflare:workers";
+import { getPaymentProvider, defaultMethod } from "../../features/payments";
+import { getStoreSettings } from "../../features/settings/db";
+import { recordPaidWebhookOrder } from "../../features/orders/recordWebhook";
 
 export const prerender = false;
 
@@ -25,5 +25,5 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   await recordPaidWebhookOrder(result, origin, method, settings);
-  return new Response('ok', { status: 200 });
+  return new Response("ok", { status: 200 });
 };
