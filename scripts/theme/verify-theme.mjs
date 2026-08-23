@@ -5,8 +5,8 @@
  *
  * A script rather than a `&&` chain for one reason: `astro check` must be
  * told which theme to type-check. Its default tsconfig follows
- * theme.config.json — deliberately, so an env-selected process never
- * rewrites the shared file (see scripts/theme-css.mjs) — which means the
+ * config/theme.config.json — deliberately, so an env-selected process never
+ * rewrites the shared file (see scripts/theme/theme-css.mjs) — which means the
  * env-selected check has to pass its per-theme tsconfig explicitly, and
  * package scripts cannot interpolate the resolved id portably.
  *
@@ -28,7 +28,7 @@ const steps = [
   ["vp", ["exec", "vitest", "run", "tests/storefront"]],
   ["vp", ["exec", "astro", "check", "--tsconfig", tsconfig]],
   ["vp", ["exec", "astro", "build"]],
-  ["node", ["scripts/check-built-css.mjs"]],
+  ["node", ["scripts/check/check-built-css.mjs"]],
 ];
 
 for (const [cmd, args] of steps) {

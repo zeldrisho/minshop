@@ -8,11 +8,11 @@ import { readFileSync } from "node:fs";
 // texture landed behind every authenticated Admin page while core Admin text
 // stayed hardcoded dark — about 1.1:1. These assertions pin the isolation:
 // the Admin stylesheet entry must never pull in the active theme, and the
-// layout must use it. The compiled-CSS check (scripts/check-built-css.mjs)
+// layout must use it. The compiled-CSS check (scripts/check/check-built-css.mjs)
 // verifies the same property in the built output.
 
-import { discoverThemeIds } from "../../scripts/themes.mjs";
-import { GENERATED_CSS_DIR, writeThemeArtifacts } from "../../scripts/theme-css.mjs";
+import { discoverThemeIds } from "../../scripts/theme/themes.mjs";
+import { GENERATED_CSS_DIR, writeThemeArtifacts } from "../../scripts/theme/theme-css.mjs";
 
 const admin = readFileSync("src/styles/admin.css", "utf8");
 const layout = readFileSync("src/layouts/AdminLayout.astro", "utf8");

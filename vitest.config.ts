@@ -1,7 +1,7 @@
 /// <reference types="vite-plus" />
 import { getViteConfig } from "astro/config";
-import { resolveTheme } from "./scripts/themes.mjs";
-import { themeCssPath, writeThemeArtifacts } from "./scripts/theme-css.mjs";
+import { resolveTheme } from "./scripts/theme/themes.mjs";
+import { themeCssPath, writeThemeArtifacts } from "./scripts/theme/theme-css.mjs";
 
 // Astro-aware but config-file-free. `getViteConfig` is what compiles `.astro`
 // components, so storefront presentation contracts can be rendered through
@@ -21,7 +21,7 @@ import { themeCssPath, writeThemeArtifacts } from "./scripts/theme-css.mjs";
 // standalone commands (test:storefront-contract, test:watch) would otherwise
 // die collecting tests with "Tsconfig not found". Safe to run from any number
 // of concurrent processes — writes are deterministic and idempotent (see the
-// design rule in scripts/theme-css.mjs).
+// design rule in scripts/theme/theme-css.mjs).
 writeThemeArtifacts();
 const theme = resolveTheme();
 

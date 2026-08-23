@@ -10,7 +10,7 @@ set -euo pipefail
 # which is exactly the situation on the live demo today.
 #
 # Usage:
-#   bash scripts/seed-storefront-states.sh [scenario]
+#   bash scripts/db/seed-storefront-states.sh [scenario]
 #
 # Scenarios set store-wide state that cannot coexist in one render:
 #   default        cart and buy-now on, demo rail available
@@ -88,7 +88,7 @@ Seeded. Routes worth looking at (vp run dev):
   /no-such-page                    404
 
 Re-run with a scenario to change store-wide state:
-  bash scripts/seed-storefront-states.sh cart-off
-  bash scripts/seed-storefront-states.sh buy-now-off
-  bash scripts/seed-storefront-states.sh no-payment
+  bash scripts/db/seed-storefront-states.sh cart-off
+  bash scripts/db/seed-storefront-states.sh buy-now-off
+  bash scripts/db/seed-storefront-states.sh no-payment
 ROUTES

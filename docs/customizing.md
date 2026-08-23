@@ -359,7 +359,7 @@ rm -rf src/themes/your-store
 cp -R src/themes/studio src/themes/your-store
 ```
 
-Leave `theme.config.json` naming `your-store`. Then run the gates:
+Leave `config/theme.config.json` naming `your-store`. Then run the gates:
 
 ```bash
 vp run theme:check
@@ -378,7 +378,7 @@ Which theme is active is one value:
 { "theme": "your-store" }
 ```
 
-in `theme.config.json`. Change it and rebuild to try another theme;
+in `config/theme.config.json`. Change it and rebuild to try another theme;
 `THEME=<id> vp run dev` does the same thing for one command.
 
 ## Resetting a file

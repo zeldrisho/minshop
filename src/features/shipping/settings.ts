@@ -20,7 +20,7 @@ import {
 } from "./calculator.ts";
 import { CATCH_ALL, countryName, isCountryCode } from "./countries.ts";
 import { toGrams, type WeightUnit } from "./weight.ts";
-import { toMinorUnits } from "../../money.ts";
+import { toMinorUnits } from "../../lib/money.ts";
 
 export const SHIPPING_CONFIG_KEY = "shipping_config";
 

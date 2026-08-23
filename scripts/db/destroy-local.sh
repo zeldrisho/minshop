@@ -4,7 +4,7 @@
 # so the next `provision:local` / dev run starts fresh — no products, orders,
 # settings, or images (the setup wizard runs again). Local only, no cloud calls.
 #
-#   Usage:  scripts/destroy-local.sh [--yes]
+#   Usage:  scripts/db/destroy-local.sh [--yes]
 #   --yes:  skip the confirmation prompt.
 #
 # Removes only the D1 + R2 data dirs under .wrangler/state — never the .wrangler root.

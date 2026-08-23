@@ -7,7 +7,7 @@ import { accountsEnabled, getCustomerEmail } from '../../features/auth/customer'
 import { countOrdersByEmail, listOrdersByEmail } from '../../features/orders/db';
 import { orderReference } from '../../features/orders/number';
 import { guestOrderUrl } from '../../features/orders/guestAccess.ts';
-import { paginate, queryHref } from '../../pagination';
+import { paginate, queryHref } from '../../lib/pagination';
 import Pagination from '../../components/Pagination.astro';
 import { catalogPath } from '../../features/settings/home';
 
