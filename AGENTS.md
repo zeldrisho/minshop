@@ -17,7 +17,8 @@
 | `mcp/`                             | Standalone MCP Worker — own `package.json` / `node_modules`          |
 | `db/migrations/`                   | Additive D1 migrations (numbered, never rewrite)                     |
 | `db/seeds/`                        | Seed SQL (`seed.sql`, demo catalog)                                  |
-| `config/`                          | Theme selection, wrangler template, oxlint plugin                    |
+| `config/`                          | Theme selection, wrangler template                                   |
+| `tools/`                           | Custom oxlint plugin (`anti-slop`)                                   |
 | `scripts/{db,theme,deploy,check}/` | Ops scripts grouped by domain                                        |
 | `tests/`                           | Integration, fixtures, baselines, contract suites                    |
 
