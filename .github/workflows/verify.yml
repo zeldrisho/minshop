@@ -20,19 +20,16 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
+      - name: Set up Vite+ (Node + pnpm)
+        uses: voidzero-dev/setup-vp@v1.17.0
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            mcp/package-lock.json
+          cache: true
 
       - name: Install storefront dependencies
-        run: npm ci
+        run: vp install
 
       - name: Install MCP dependencies
         run: npm ci --prefix mcp
@@ -48,7 +45,7 @@ jobs:
             wrangler.template.jsonc > wrangler.jsonc
 
       - name: Run complete verification
-        run: npm run verify
+        run: vp run verify
 
   # Which themes exist is a property of the TREE, not of this file: a generated
   # store carries its merchant-owned theme plus whatever shipped themes it kept,
@@ -63,7 +60,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: List themes not covered by the main job
         id: discover
@@ -98,17 +95,16 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
+      - name: Set up Vite+ (Node + pnpm)
+        uses: voidzero-dev/setup-vp@v1.17.0
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: package-lock.json
+          cache: true
 
       - name: Install storefront dependencies
-        run: npm ci
+        run: vp install
 
       - name: Create isolated Wrangler configuration
         run: |
@@ -121,4 +117,4 @@ jobs:
             wrangler.template.jsonc > wrangler.jsonc
 
       - name: Verify the theme builds and honours the contract
-        run: npm run verify:theme
+        run: vp run verify:theme
