@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import type { WebhookResult } from "../payments/provider";
 import { recordPaidOrder, getOrderByProviderSessionId } from "./db";
 import { deliverOrderNotifications, sweepStaleNotifications } from "../email/outbox";
+import { resolveGuestKek } from "./guestAccess.ts";
 import { persistRefundEvent, applyRefundEvent } from "../refunds/sync";
 import { sendRefundNotice } from "../refunds/notify";
 import { getPaymentProvider, type PaymentMethod } from "../payments";
@@ -89,7 +90,7 @@ export async function recordPaidWebhookOrder(
       const settled = await getOrderByProviderSessionId(env.DB, paidOrder.providerSessionId);
       if (settled) {
         await markPending();
-        await deliverOrderNotifications(env.DB, settled.id, origin, settings);
+        await deliverOrderNotifications(env.DB, settled.id, origin, settings, resolveGuestKek(env));
         return;
       }
       throw new Error(`Missing or expired inventory reservation ${paidOrder.reservationId}.`);
@@ -120,7 +121,7 @@ export async function recordPaidWebhookOrder(
       // The redelivery IS the safety net: if the first delivery recorded the
       // order but died before its emails went out, this retry finishes them.
       // (Previously this path returned with the emails unsent, forever.)
-      await deliverOrderNotifications(env.DB, existing.id, origin, settings);
+      await deliverOrderNotifications(env.DB, existing.id, origin, settings, resolveGuestKek(env));
       return;
     }
     throw new Error(
@@ -138,8 +139,8 @@ export async function recordPaidWebhookOrder(
   // this call reports outcomes into the outbox instead of throwing. The sweep
   // rides along to drain any OTHER order's stranded rows a little per sale.
   const deliver = async () => {
-    await deliverOrderNotifications(env.DB, orderId, origin, settings);
-    await sweepStaleNotifications(env.DB, origin);
+    await deliverOrderNotifications(env.DB, orderId, origin, settings, resolveGuestKek(env));
+    await sweepStaleNotifications(env.DB, origin, resolveGuestKek(env));
   };
   if (waitUntil)
     waitUntil(deliver().catch((err) => console.error("Notification delivery failed:", err)));

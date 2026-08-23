@@ -20,7 +20,7 @@ vi.mock("../orders/guestAccess.ts", () => ({
 import { deliverOrderNotifications } from "./outbox";
 import { getEmailProvider } from "./index";
 import { getOrder, listOrderItemsWithImages } from "../orders/db";
-import { getGuestAccess } from "../orders/guestAccess.ts";
+import { getGuestAccess, guestOrderUrl } from "../orders/guestAccess.ts";
 
 interface Row {
   order_id: number;
@@ -297,6 +297,9 @@ describe("deliverOrderNotifications", () => {
       created_at: "",
       rotated_at: null,
     } as never);
+    // The URL builder unseals the stored token; the outbox never touches the
+    // raw credential itself.
+    vi.mocked(guestOrderUrl).mockResolvedValue(`https://x/order/otk_zZ11abCDefGHijKLmnpQ`);
     const rows: Row[] = [
       {
         order_id: 7,
@@ -307,8 +310,10 @@ describe("deliverOrderNotifications", () => {
         last_error: null,
       },
     ];
-    await deliverOrderNotifications(fakeDb(rows), 7, "https://x", SETTINGS);
+    const db = fakeDb(rows);
+    await deliverOrderNotifications(db, 7, "https://x", SETTINGS);
     expect(rows[0].state).toBe("sent");
+    expect(guestOrderUrl).toHaveBeenCalledWith(db, ordPublicId, "https://x", undefined);
     // Its own versioned idempotency key — a second reissue can never collide.
     expect(send.mock.calls[0][0].idempotencyKey).toBe(`guest-link-reissue:2/${ordPublicId}`);
     // The email is the only place the rotated token travels.

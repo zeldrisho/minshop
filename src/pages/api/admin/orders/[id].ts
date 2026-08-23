@@ -43,7 +43,7 @@ import {
 } from "../../../../features/refunds/db";
 import { sendRefundNotice } from "../../../../features/refunds/notify";
 import { getEmailProvider } from "../../../../features/email";
-import { reissueGuestAccess } from "../../../../features/orders/guestAccess.ts";
+import { reissueGuestAccess, resolveGuestKek } from "../../../../features/orders/guestAccess.ts";
 import { deliverOrderNotifications } from "../../../../features/email/outbox";
 import { getStoreSettings } from "../../../../features/settings/db";
 import { shouldSendCustomerOrderEmail } from "../../../../features/email/orderPolicy";
@@ -123,12 +123,18 @@ export const POST: APIRoute = async ({ request, params, redirect }) => {
     // Atomic: rotates the token AND queues the versioned
     // guest-link-reissue:<generation> notification in one D1 batch; refuses
     // unsettled checkouts (and unknown registry rows).
-    const reissued = await reissueGuestAccess(env.DB, existing.public_id);
+    const reissued = await reissueGuestAccess(env.DB, existing.public_id, resolveGuestKek(env));
     if (!reissued) {
       return fail("Only settled orders with a guest link can be reissued.");
     }
     try {
-      await deliverOrderNotifications(env.DB, id, new URL(request.url).origin);
+      await deliverOrderNotifications(
+        env.DB,
+        id,
+        new URL(request.url).origin,
+        undefined,
+        resolveGuestKek(env),
+      );
     } catch (err) {
       // The row stays queued; the piggyback sweep will retry it.
       console.error("Guest-link reissue delivery failed:", err);
@@ -309,7 +315,13 @@ export const POST: APIRoute = async ({ request, params, redirect }) => {
       !!(await getEmailProvider(settings));
     if (willEmail) {
       try {
-        await deliverOrderNotifications(env.DB, orderId, new URL(request.url).origin, settings);
+        await deliverOrderNotifications(
+          env.DB,
+          orderId,
+          new URL(request.url).origin,
+          settings,
+          resolveGuestKek(env),
+        );
       } catch (err) {
         // Row stays queued; the piggyback sweep retries it.
         console.error("Shipped-notification delivery failed:", err);
@@ -621,7 +633,13 @@ export const POST: APIRoute = async ({ request, params, redirect }) => {
   // orders without an email are marked skipped by the deliverer itself.
   await queueNotification(env.DB, id, "order-shipped");
   try {
-    await deliverOrderNotifications(env.DB, id, new URL(request.url).origin);
+    await deliverOrderNotifications(
+      env.DB,
+      id,
+      new URL(request.url).origin,
+      undefined,
+      resolveGuestKek(env),
+    );
   } catch (err) {
     console.error("Shipped-notification delivery failed:", err);
   }

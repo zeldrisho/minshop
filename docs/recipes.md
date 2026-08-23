@@ -41,7 +41,7 @@ Edit `shipping.zones` in `config.ts` default (or `store.config.ts` override). Pu
 
 ```sh
 vp exec wrangler d1 migrations create minshop-db <name>
-# edit migrations/<number>_<name>.sql  (CREATE TABLE IF NOT EXISTS / ALTER TABLE ADD COLUMN)
+# edit db/migrations/<number>_<name>.sql  (CREATE TABLE IF NOT EXISTS / ALTER TABLE ADD COLUMN)
 vp run db:migrate          # local
 vp run db:migrate:remote   # prod, before deploy
 ```

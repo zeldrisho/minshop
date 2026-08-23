@@ -15,7 +15,7 @@
 | `src/themes/<theme>/` | Templates + `tokens.css` (`@theme` block)                            |
 | `src/middleware.ts`   | Admin auth gate (fail-closed)                                        |
 | `mcp/`                | Standalone MCP Worker — own `package.json` / `node_modules`          |
-| `migrations/`         | Additive D1 migrations (numbered, never rewrite)                     |
+| `db/migrations/`      | Additive D1 migrations (numbered, never rewrite)                     |
 
 ## Commands
 
