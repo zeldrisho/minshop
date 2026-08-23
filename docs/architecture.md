@@ -23,7 +23,7 @@ MCP Worker (mcp/) ──> public JSON API (/api/products, /api/checkout) ──>
 
 ## Project layout
 
-```
+```text
 src/
   config.ts              SCHEMA + DEFAULTS (upstream-owned)
   store.config.ts        build-time overrides (deep-merged)
