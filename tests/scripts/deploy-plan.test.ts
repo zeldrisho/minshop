@@ -221,7 +221,7 @@ describe("private deliverable provisioning", () => {
         readFileSync("config/wrangler.template.jsonc", "utf8").match(/__[A-Z_]+__/g) ?? [],
       ),
     ];
-    const workflow = readFileSync(".github/workflows/verify.yml", "utf8");
+    const workflow = readFileSync(".github/workflows/ci.yml", "utf8");
     expect(placeholders.length).toBeGreaterThan(0);
     for (const placeholder of placeholders) {
       // Both render sites must cover it: the verify job and the theme matrix.
