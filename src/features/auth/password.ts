@@ -14,18 +14,31 @@ const KEY_BYTES = 32;
 const SALT_BYTES = 16;
 
 const b64 = (bytes: Uint8Array): string => btoa(String.fromCharCode(...bytes));
-const unb64 = (s: string): Uint8Array<ArrayBuffer> => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+const unb64 = (s: string): Uint8Array<ArrayBuffer> =>
+  Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
-async function derive(password: string, salt: Uint8Array<ArrayBuffer>, iterations: number): Promise<Uint8Array> {
+/**
+ * Derives a PBKDF2-HMAC-SHA256 key from a password and salt.
+ *
+ * @param password - The password to derive the key from
+ * @param salt - The salt used for key derivation
+ * @param iterations - The number of PBKDF2 iterations
+ * @returns The derived key bytes
+ */
+async function derive(
+  password: string,
+  salt: Uint8Array<ArrayBuffer>,
+  iterations: number,
+): Promise<Uint8Array> {
   const key = await crypto.subtle.importKey(
-    'raw',
+    "raw",
     new TextEncoder().encode(password),
-    'PBKDF2',
+    "PBKDF2",
     false,
-    ['deriveBits'],
+    ["deriveBits"],
   );
   const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+    { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
     key,
     KEY_BYTES * 8,
   );
@@ -39,10 +52,15 @@ export async function hashPassword(password: string): Promise<string> {
   return `pbkdf2$${ITERATIONS}$${b64(salt)}$${b64(hash)}`;
 }
 
-/** Constant-time verify a typed password against a stored `pbkdf2$…` hash. */
+/**
+ * Verifies a password against a stored PBKDF2 hash.
+ *
+ * @param stored - A hash encoded as `pbkdf2$<iterations>$<salt>$<hash>`
+ * @returns `true` if the password matches the stored hash, `false` for invalid data or a mismatch
+ */
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {
-  const parts = stored.split('$');
-  if (parts.length !== 4 || parts[0] !== 'pbkdf2') return false;
+  const parts = stored.split("$");
+  if (parts.length !== 4 || parts[0] !== "pbkdf2") return false;
   const iterations = Number(parts[1]);
   if (!Number.isInteger(iterations) || iterations < 1) return false;
   let salt: Uint8Array<ArrayBuffer>;

@@ -1,17 +1,17 @@
-import type { AstroCookies } from 'astro';
-import type { D1Database } from '@cloudflare/workers-types';
-import { getProductsByPublicIds, type Product } from '../products/db';
+import type { AstroCookies } from "astro";
+import type { D1Database } from "@cloudflare/workers-types";
+import { getProductsByPublicIds, type Product } from "../products/db";
 import {
   getActiveExtrasByPublicIds,
   getActiveVariantsByPublicIds,
   type ProductVariant,
   type ProductExtra,
-} from '../products/variants';
-import { parseCartKey, lineUnitPriceCents } from './key';
+} from "../products/variants";
+import { parseCartKey, lineUnitPriceCents } from "./key";
 
-const COOKIE = 'cart';
+const COOKIE = "cart";
 /** Script-readable item count (see writeCart). Mirrors COOKIE's lifetime. */
-export const COUNT_COOKIE = 'cart_n';
+export const COUNT_COOKIE = "cart_n";
 const MAX_QTY = 99;
 /**
  * Cookie format version. v2 = public-ID line keys stored as {v: 2, items: {key: qty}}.
@@ -35,22 +35,33 @@ export interface CartLine {
   availableStock: number; // variant stock when a variant, else product stock
 }
 
+/**
+ * Reads and sanitizes the cart stored in cookies.
+ *
+ * @param cookies - The request cookies containing the cart data
+ * @returns The sanitized cart, or an empty cart when the cookie is missing, malformed, or uses an unsupported version
+ */
 export function readCart(cookies: AstroCookies): Cart {
   const raw = cookies.get(COOKIE);
   if (!raw) return {};
   try {
     const parsed = raw.json() as { v?: unknown; items?: unknown };
-    if (!parsed || typeof parsed !== 'object' || parsed.v !== CART_VERSION) return {};
+    if (!parsed || typeof parsed !== "object" || parsed.v !== CART_VERSION) return {};
     return sanitize(parsed.items);
   } catch {
     return {};
   }
 }
 
-/** Keep only well-formed key→qty pairs, clamped — never trust the cookie. */
+/**
+ * Sanitizes cart entries by retaining valid keys and positive integer quantities.
+ *
+ * @param obj - Value containing candidate cart entries
+ * @returns A cart containing valid entries with quantities capped at the maximum
+ */
 function sanitize(obj: unknown): Cart {
   const out: Cart = {};
-  if (obj && typeof obj === 'object') {
+  if (obj && typeof obj === "object") {
     for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
       const qty = Number(v);
       if (parseCartKey(k) && Number.isInteger(qty) && qty > 0) {
@@ -61,40 +72,60 @@ function sanitize(obj: unknown): Cart {
   return out;
 }
 
+/**
+ * Stores the cart and its item count in cookies with a shared lifetime.
+ *
+ * @param cart - The cart to store.
+ * @param secure - Whether the cookies should require secure connections.
+ */
 export function writeCart(cookies: AstroCookies, cart: Cart, secure: boolean): void {
-  cookies.set(COOKIE, { v: CART_VERSION, items: cart }, {
-    path: '/',
-    httpOnly: true,
-    sameSite: 'lax',
-    secure,
-    maxAge: 60 * 60 * 24 * 30,
-  });
+  cookies.set(
+    COOKIE,
+    { v: CART_VERSION, items: cart },
+    {
+      path: "/",
+      httpOnly: true,
+      sameSite: "lax",
+      secure,
+      maxAge: 60 * 60 * 24 * 30,
+    },
+  );
   // Companion cookie holding ONLY the item count, readable by script so the
   // header badge renders with no request (the cart itself stays httpOnly, so a
   // reader learns "3 items" and nothing else). Written and cleared with the cart,
   // so the two share a lifetime and can't drift the way localStorage would.
   cookies.set(COUNT_COOKIE, String(cartCount(cart)), {
-    path: '/',
+    path: "/",
     httpOnly: false,
-    sameSite: 'lax',
+    sameSite: "lax",
     secure,
     maxAge: 60 * 60 * 24 * 30,
   });
 }
 
+/**
+ * Removes the cart and cart item-count cookies.
+ */
 export function clearCart(cookies: AstroCookies): void {
-  cookies.delete(COOKIE, { path: '/' });
-  cookies.delete(COUNT_COOKIE, { path: '/' });
+  cookies.delete(COOKIE, { path: "/" });
+  cookies.delete(COUNT_COOKIE, { path: "/" });
 }
 
+/**
+ * Calculates the total quantity of items in a cart.
+ *
+ * @param cart - The cart whose item quantities are summed
+ * @returns The total quantity of items in the cart
+ */
 export function cartCount(cart: Cart): number {
   return Object.values(cart).reduce((sum, q) => sum + q, 0);
 }
 
 /**
- * Resolve cart public IDs against D1 for current name/price/stock, dropping any
- * that are missing or inactive. One batched read per entity type; pricing always
- * comes from the DB, never the cookie.
+ * Resolves cart entries against current product, variant, and extra data.
+ *
+ * @param cart - The cart entries to resolve.
+ * @returns The resolved cart lines and their subtotal in cents.
  */
 export async function resolveCart(
   db: D1Database,
@@ -138,8 +169,7 @@ export async function resolveCart(
     const lineExtras = parsed.extraPublicIds
       .map((pid) => extrasByPid.get(pid))
       .filter(
-        (extra): extra is ProductExtra =>
-          extra !== undefined && extra.product_id === product.id,
+        (extra): extra is ProductExtra => extra !== undefined && extra.product_id === product.id,
       );
 
     const unitPriceCents = lineUnitPriceCents(product.price_cents, variant, lineExtras);

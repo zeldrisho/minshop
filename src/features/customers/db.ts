@@ -1,5 +1,5 @@
-import type { D1Database } from '@cloudflare/workers-types';
-import type { Order } from '../orders/db';
+import type { D1Database } from "@cloudflare/workers-types";
+import type { Order } from "../orders/db";
 
 /**
  * Customers are not a stored entity — minshop is guest-checkout. This is a
@@ -13,10 +13,17 @@ export interface CustomerSummary {
   last_order: string;
 }
 
-/** Distinct customers (by email) with order count, lifetime value, last order. */
+/**
+ * Lists customers with order counts, non-refunded lifetime values, and most recent order dates.
+ *
+ * @param orderBy - SQL expression used to sort the customer summaries
+ * @param limit - Maximum number of customers to return
+ * @param offset - Number of customers to skip before returning results
+ * @returns Customer summaries for orders associated with non-empty email addresses
+ */
 export async function listCustomers(
   db: D1Database,
-  orderBy = 'lifetime_cents DESC',
+  orderBy = "lifetime_cents DESC",
   limit = 50,
   offset = 0,
 ): Promise<CustomerSummary[]> {
@@ -74,7 +81,7 @@ export async function getCustomerOrders(
   offset = 0,
 ): Promise<Order[]> {
   const { results } = await db
-    .prepare('SELECT * FROM orders WHERE email = ? ORDER BY created_at DESC LIMIT ? OFFSET ?')
+    .prepare("SELECT * FROM orders WHERE email = ? ORDER BY created_at DESC LIMIT ? OFFSET ?")
     .bind(email, limit, offset)
     .all<Order>();
   return results ?? [];

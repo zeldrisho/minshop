@@ -1,12 +1,9 @@
-import { formatPrice, getConfig } from '../../config';
-import type { Order, OrderItemWithImage, ShippingAddress } from '../orders/db';
-import { orderReference } from '../orders/number';
-import {
-  productEmailImageUrl,
-  type ImageDelivery,
-} from '../products/image';
-import { carrierName, trackingUrl } from '../orders/tracking';
-import type { EmailMessage } from './provider';
+import { formatPrice, getConfig } from "../../config";
+import type { Order, OrderItemWithImage, ShippingAddress } from "../orders/db";
+import { orderReference } from "../orders/number";
+import { productEmailImageUrl, type ImageDelivery } from "../products/image";
+import { carrierName, trackingUrl } from "../orders/tracking";
+import type { EmailMessage } from "./provider";
 import {
   PALETTE,
   emailShell,
@@ -15,7 +12,7 @@ import {
   emailItemsTable,
   escapeHtml,
   type TotalRow,
-} from './layout';
+} from "./layout";
 
 /** A 48px product thumbnail cell (absolute URL so email clients can fetch it).
  *  `new URL` resolves both an absolute image base (R2 domain) and the relative
@@ -25,52 +22,56 @@ const thumbCell = (
   baseUrl: string,
   imageDelivery: ImageDelivery,
 ): string => {
-  const src = productEmailImageUrl(
-    imageKey,
-    baseUrl,
-    getConfig().images.baseUrl,
-    imageDelivery,
-  );
+  const src = productEmailImageUrl(imageKey, baseUrl, getConfig().images.baseUrl, imageDelivery);
   return `<td style="width:60px;padding:10px 0;border-bottom:1px solid ${PALETTE.line};"><img src="${escapeHtml(src)}" width="48" height="48" alt="" style="display:block;border-radius:4px;object-fit:cover;background:${PALETTE.paper};" /></td>`;
 };
 
-/** Shipping / discount / tax / total, in the order they appear on a receipt. */
+/**
+ * Builds receipt rows for shipping, discounts, tax, and the order total.
+ *
+ * @param money - Formats an amount in cents for display
+ * @returns Receipt rows in display order, omitting zero-valued optional charges
+ */
 function totalRows(order: Order, money: (cents: number) => string): TotalRow[] {
   return [
-    ...(order.shipping_cents > 0 ? [{ label: 'Shipping', amount: money(order.shipping_cents) }] : []),
-    ...(order.discount_cents > 0
-      ? [{ label: 'Discount', amount: `&minus;${money(order.discount_cents)}` }]
+    ...(order.shipping_cents > 0
+      ? [{ label: "Shipping", amount: money(order.shipping_cents) }]
       : []),
-    ...(order.tax_cents > 0 ? [{ label: 'Tax', amount: money(order.tax_cents) }] : []),
-    { label: 'Total', amount: money(order.amount_total_cents), strong: true },
+    ...(order.discount_cents > 0
+      ? [{ label: "Discount", amount: `&minus;${money(order.discount_cents)}` }]
+      : []),
+    ...(order.tax_cents > 0 ? [{ label: "Tax", amount: money(order.tax_cents) }] : []),
+    { label: "Total", amount: money(order.amount_total_cents), strong: true },
   ];
 }
 
 /** One-line-per-field shipping address, blank lines dropped. */
 function formatShipAddress(order: Order): string {
-  if (!order.ship_address) return '-';
+  if (!order.ship_address) return "-";
   const a = JSON.parse(order.ship_address) as ShippingAddress;
   return [
     a.name,
     a.line1,
     a.line2,
-    [a.city, a.state, a.postal].filter(Boolean).join(', '),
+    [a.city, a.state, a.postal].filter(Boolean).join(", "),
     a.country,
   ]
     .filter(Boolean)
-    .join('\n');
+    .join("\n");
 }
 
 /**
- * Build the order-confirmation email for a paid order. `order.email` must be set.
- * `baseUrl` is the site origin (e.g. https://shop.example.com) for the order link.
+ * Creates a paid-order confirmation email with item details, charges, totals, and optional order or download links.
+ *
+ * @param guestOrderUrl - Tokenized guest link for viewing the order; omit or set to `null` to exclude the link.
+ * @returns The order-confirmation email message addressed to the customer
  */
 export function orderConfirmationEmail(
   order: Order,
   items: OrderItemWithImage[],
   baseUrl: string,
   storeName: string,
-  imageDelivery: ImageDelivery = 'original',
+  imageDelivery: ImageDelivery = "original",
   /** Tokenized guest link (allowlisted email position); null = omit the link. */
   guestOrderUrl?: string | null,
 ): EmailMessage {
@@ -96,11 +97,11 @@ export function orderConfirmationEmail(
     `Total: ${money(order.amount_total_cents)}`,
     ...(hasDigital && orderUrl ? [``, `Your download is ready.`] : []),
     ...(orderUrl ? [``, `View your order: ${orderUrl}`] : []),
-  ].join('\n');
+  ].join("\n");
 
   const html = emailShell({
     storeName,
-    heading: 'Thanks for your order',
+    heading: "Thanks for your order",
     subheading: `Order #${num} is confirmed. We'll email you again when it ships.`,
     body:
       emailItemsTable(
@@ -114,8 +115,8 @@ export function orderConfirmationEmail(
       ) +
       (hasDigital && orderUrl
         ? `<p style="margin:20px 0 0;font-size:14px;">Your download is ready.</p>`
-        : '') +
-      (orderUrl ? emailButton(orderUrl, 'View your order') : ''),
+        : "") +
+      (orderUrl ? emailButton(orderUrl, "View your order") : ""),
     footer: `Questions about this order? Just reply to this email.`,
   });
 
@@ -128,8 +129,15 @@ export function orderConfirmationEmail(
 }
 
 /**
- * Build the store-owner "new order" notification. `to` is the owner address;
- * `baseUrl` is the site origin for the admin order link.
+ * Builds a store-owner notification containing the new order details and an admin link.
+ *
+ * @param order - The order to include in the notification
+ * @param items - The products included in the order
+ * @param to - The store owner's email address
+ * @param baseUrl - The site origin used to construct the admin order link
+ * @param storeName - The store name included in the email
+ * @param imageDelivery - The configured product image delivery mode
+ * @returns The store-owner order notification email
  */
 export function orderNotificationEmail(
   order: Order,
@@ -137,13 +145,13 @@ export function orderNotificationEmail(
   to: string,
   baseUrl: string,
   storeName: string,
-  imageDelivery: ImageDelivery = 'original',
+  imageDelivery: ImageDelivery = "original",
 ): EmailMessage {
-  const publicId = order.public_id ?? '—';
+  const publicId = order.public_id ?? "—";
   // ASCII hyphen on purpose: a non-ASCII char anywhere in a header forces RFC
   // 2047 encoded-words, which read as "=?utf-8?b?...?=" in raw logs. The em
   // dashes in the BODY are fine — bodies declare their charset.
-  const subjectPublicId = order.public_id ? ` - ${order.public_id}` : '';
+  const subjectPublicId = order.public_id ? ` - ${order.public_id}` : "";
   const money = (cents: number) => formatPrice(cents, order.currency);
   const shipText = formatShipAddress(order);
   const adminUrl = `${baseUrl}/admin/orders/${order.public_id ?? order.id}`;
@@ -156,7 +164,7 @@ export function orderNotificationEmail(
     `New order #${order.id}`,
     `Public ID: ${publicId}`,
     ``,
-    `Customer: ${order.email ?? '-'}`,
+    `Customer: ${order.email ?? "-"}`,
     ``,
     `Ship to:`,
     shipText,
@@ -168,17 +176,17 @@ export function orderNotificationEmail(
     `Total: ${money(order.amount_total_cents)}`,
     ``,
     `View in admin: ${adminUrl}`,
-  ].join('\n');
+  ].join("\n");
 
   const html = emailShell({
     storeName,
     heading: `New order #${order.id}`,
-    subheading: `${money(order.amount_total_cents)} from ${escapeHtml(order.email ?? 'an unknown address')}`,
+    subheading: `${money(order.amount_total_cents)} from ${escapeHtml(order.email ?? "an unknown address")}`,
     body:
-      emailLabel('Order identifiers') +
+      emailLabel("Order identifiers") +
       `<p style="margin:0;font-size:14px;line-height:1.6;">Order #${order.id}<br><span style="font-family:monospace;">${escapeHtml(publicId)}</span></p>` +
-      emailLabel('Ship to') +
-      `<p style="margin:0;font-size:14px;line-height:1.6;">${escapeHtml(shipText).replace(/\n/g, '<br>')}</p>` +
+      emailLabel("Ship to") +
+      `<p style="margin:0;font-size:14px;line-height:1.6;">${escapeHtml(shipText).replace(/\n/g, "<br>")}</p>` +
       emailItemsTable(
         items.map((it) => ({
           thumb: thumbCell(it.image_key, baseUrl, imageDelivery),
@@ -188,7 +196,7 @@ export function orderNotificationEmail(
         })),
         totalRows(order, money),
       ) +
-      emailButton(adminUrl, 'View in admin'),
+      emailButton(adminUrl, "View in admin"),
   });
 
   return {
@@ -199,7 +207,14 @@ export function orderNotificationEmail(
   };
 }
 
-/** Build the "your order has shipped" email. `order.email` must be set. */
+/**
+ * Builds a shipment notification email for an order.
+ *
+ * @param order - The shipped order, including its recipient email address
+ * @param storeName - The store name displayed in the email
+ * @param guestOrderUrl - Optional tokenized URL for viewing the order
+ * @returns The shipment notification email message
+ */
 export function orderShippedEmail(
   order: Order,
   storeName: string,
@@ -222,10 +237,10 @@ export function orderShippedEmail(
         ]
       : []),
     ...(orderUrl ? [``, `View your order: ${orderUrl}`] : []),
-  ].join('\n');
+  ].join("\n");
 
   const trackingHtml = order.tracking_number
-    ? emailLabel('Tracking') +
+    ? emailLabel("Tracking") +
       `<p style="margin:0;font-size:14px;line-height:1.6;">
         ${escapeHtml(carrierName(order.tracking_carrier))}<br>
         ${
@@ -234,20 +249,23 @@ export function orderShippedEmail(
             : escapeHtml(order.tracking_number)
         }
       </p>`
-    : '';
+    : "";
 
   const html = emailShell({
     storeName,
-    heading: 'Your order is on its way',
+    heading: "Your order is on its way",
     subheading: `Order #${num} shipped.`,
     body:
       trackingHtml +
       (url
-        ? emailButton(url, 'Track your package')
+        ? emailButton(url, "Track your package")
         : orderUrl
-          ? emailButton(orderUrl, 'View your order')
-          : ''),
-    footer: orderUrl && url ? `Order details: <a href="${orderUrl}" style="color:${PALETTE.muted};">${orderUrl}</a>` : undefined,
+          ? emailButton(orderUrl, "View your order")
+          : ""),
+    footer:
+      orderUrl && url
+        ? `Order details: <a href="${orderUrl}" style="color:${PALETTE.muted};">${orderUrl}</a>`
+        : undefined,
   });
 
   return {
@@ -259,12 +277,12 @@ export function orderShippedEmail(
 }
 
 /**
- * Refund notice. Sent once per newly recognised refund — the amount the total
- * just advanced by, not the cumulative total — so a partial refund followed by
- * another reads as two distinct amounts rather than one growing number.
+ * Builds an email notification for a partial or full order refund.
  *
- * `refundedCents` is the running total, shown only when it differs from this
- * refund, i.e. when there was an earlier one.
+ * @param refundCents - The amount refunded in this transaction, in the order's currency
+ * @param refundedCents - The cumulative amount refunded for the order, in cents
+ * @param guestOrderUrl - Optional link for guests to view their order
+ * @returns The refund notification email
  */
 export function orderRefundedEmail(
   order: Order,
@@ -284,9 +302,9 @@ export function orderRefundedEmail(
   // How the money actually gets back differs per rail, and the honest answer is
   // "it depends on your bank" for cards. Saying nothing invites a support email.
   const timing =
-    method === 'stripe' || method === null
-      ? 'Card refunds usually appear within 5-10 business days, depending on your bank.'
-      : 'The refund was sent back over the same payment method you used.';
+    method === "stripe" || method === null
+      ? "Card refunds usually appear within 5-10 business days, depending on your bank."
+      : "The refund was sent back over the same payment method you used.";
 
   // Prices in the ORDER's currency, not the store's current one — an order
   // placed before a currency change must still read back in what was charged.
@@ -304,29 +322,29 @@ export function orderRefundedEmail(
     ``,
     timing,
     ...(orderUrl ? [``, `View your order: ${orderUrl}`] : []),
-  ].join('\n');
+  ].join("\n");
 
   const rows: TotalRow[] = [
-    { label: 'Refunded', amount: money(refundCents), strong: true },
-    ...(priorLine ? [{ label: 'Total refunded', amount: money(refundedCents) }] : []),
-    ...(full ? [] : [{ label: 'Still paid', amount: money(remaining) }]),
+    { label: "Refunded", amount: money(refundCents), strong: true },
+    ...(priorLine ? [{ label: "Total refunded", amount: money(refundedCents) }] : []),
+    ...(full ? [] : [{ label: "Still paid", amount: money(remaining) }]),
   ];
 
   const html = emailShell({
     storeName,
-    heading: full ? 'Your order has been refunded' : 'A refund is on its way',
+    heading: full ? "Your order has been refunded" : "A refund is on its way",
     subheading: `Order #${num}`,
     body:
-      emailLabel('Refund') +
+      emailLabel("Refund") +
       `<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px;">${rows
         .map(
           (r) =>
             `<tr><td style="padding:4px 0;font-size:14px;color:${PALETTE.muted};">${escapeHtml(r.label)}</td>` +
-            `<td align="right" style="padding:4px 0;font-size:14px;${r.strong ? 'font-weight:600;' : ''}">${escapeHtml(r.amount)}</td></tr>`,
+            `<td align="right" style="padding:4px 0;font-size:14px;${r.strong ? "font-weight:600;" : ""}">${escapeHtml(r.amount)}</td></tr>`,
         )
-        .join('')}</table>` +
+        .join("")}</table>` +
       `<p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:${PALETTE.muted};">${escapeHtml(timing)}</p>` +
-      (orderUrl ? emailButton(orderUrl, 'View your order') : ''),
+      (orderUrl ? emailButton(orderUrl, "View your order") : ""),
   });
 
   return {

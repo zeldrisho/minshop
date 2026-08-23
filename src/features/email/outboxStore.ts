@@ -1,4 +1,4 @@
-import type { D1Database } from '@cloudflare/workers-types';
+import type { D1Database } from "@cloudflare/workers-types";
 
 /**
  * The order_notifications state machine — every statement that moves a row
@@ -9,7 +9,11 @@ import type { D1Database } from '@cloudflare/workers-types';
  * ordering pass unnoticed.
  */
 
-export const NOTIFICATION_KINDS = ['customer-receipt', 'owner-notification', 'order-shipped'] as const;
+export const NOTIFICATION_KINDS = [
+  "customer-receipt",
+  "owner-notification",
+  "order-shipped",
+] as const;
 
 /**
  * Versioned-kind family for guest-link reissue (see the public-ID plan): each
@@ -18,7 +22,7 @@ export const NOTIFICATION_KINDS = ['customer-receipt', 'owner-notification', 'or
  * deliverer recognises the prefix rather than a fixed string, and skips any
  * event whose generation no longer matches order_guest_access.generation.
  */
-export const GUEST_LINK_REISSUE_PREFIX = 'guest-link-reissue:';
+export const GUEST_LINK_REISSUE_PREFIX = "guest-link-reissue:";
 export type GuestLinkReissueKind = `${typeof GUEST_LINK_REISSUE_PREFIX}${number}`;
 
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number] | GuestLinkReissueKind;
@@ -40,9 +44,12 @@ export function guestLinkReissueKind(generation: number): GuestLinkReissueKind {
 }
 
 /**
- * Queue one notification row outside the settlement batch (reissue). INSERT OR
- * IGNORE: the (order_id, kind) PK makes a repeat of the SAME versioned kind a
- * no-op, which is exactly the idempotency the versioned kind exists to scope.
+ * Queues a notification for an order.
+ *
+ * Repeated requests for the same order and notification kind are ignored.
+ *
+ * @param orderId - The order to notify
+ * @param kind - The notification kind to queue
  */
 export async function queueNotification(
   db: D1Database,
@@ -50,20 +57,18 @@ export async function queueNotification(
   kind: NotificationKind,
 ): Promise<void> {
   await db
-    .prepare('INSERT OR IGNORE INTO order_notifications (order_id, kind) VALUES (?, ?)')
+    .prepare("INSERT OR IGNORE INTO order_notifications (order_id, kind) VALUES (?, ?)")
     .bind(orderId, kind)
     .run();
 }
 
 /**
- * Every kind an order could still deliver: pending, or processing with an
- * expired lease. The deliverer iterates THIS rather than the fixed kind list so
- * versioned reissue rows are picked up by the same claim/send/mark machinery.
+ * Lists an order's pending notifications and processing notifications with expired leases.
+ *
+ * @param orderId - The order whose undelivered notification kinds are listed
+ * @returns Notification kinds ordered by creation time and kind
  */
-export async function listUndeliveredKinds(
-  db: D1Database,
-  orderId: number,
-): Promise<string[]> {
+export async function listUndeliveredKinds(db: D1Database, orderId: number): Promise<string[]> {
   const { results } = await db
     .prepare(
       `SELECT kind FROM order_notifications
@@ -161,10 +166,13 @@ export async function markNotificationSkipped(
 }
 
 /**
- * Failure: release for retry, or park as 'dead' once attempts are exhausted
- * (or immediately, for conditions no retry can cure — `terminal`). `attempts`
- * is always the claim's own number: it is the fencing token, never a way to
- * force a state.
+ * Records a notification delivery failure and schedules it for retry or marks it as permanently failed.
+ *
+ * @param orderId - The order containing the notification
+ * @param kind - The notification kind
+ * @param attempts - The claim attempt number used to fence stale workers
+ * @param error - The failure to record
+ * @param terminal - Whether the failure should be marked permanent
  */
 export async function markNotificationFailed(
   db: D1Database,
@@ -182,7 +190,7 @@ export async function markNotificationFailed(
         WHERE order_id = ? AND kind = ? AND state = 'processing' AND attempts = ?`,
     )
     .bind(
-      terminal || attempts >= MAX_ATTEMPTS ? 'dead' : 'pending',
+      terminal || attempts >= MAX_ATTEMPTS ? "dead" : "pending",
       message.slice(0, 500),
       orderId,
       kind,

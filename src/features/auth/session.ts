@@ -13,18 +13,25 @@
  * App-password stopgap's session layer; Cloudflare Access remains the recommended
  * production auth and is unaffected.
  */
-const PREFIX = 'v1';
+const PREFIX = "v1";
 
+/**
+ * Computes an HMAC-SHA-256 digest for a message.
+ *
+ * @param key - The secret key used to authenticate the message
+ * @param message - The message to authenticate
+ * @returns The digest encoded as a lowercase hexadecimal string
+ */
 async function hmacHex(key: string, message: string): Promise<string> {
   const k = await crypto.subtle.importKey(
-    'raw',
+    "raw",
     new TextEncoder().encode(key),
-    { name: 'HMAC', hash: 'SHA-256' },
+    { name: "HMAC", hash: "SHA-256" },
     false,
-    ['sign'],
+    ["sign"],
   );
-  const sig = await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(message));
-  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  const sig = await crypto.subtle.sign("HMAC", k, new TextEncoder().encode(message));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 /** Constant-time string compare — avoids leaking via timing (password + signature). */
@@ -53,7 +60,14 @@ export async function signSession(
   return `${payload}.${await hmacHex(signingKey, payload)}`;
 }
 
-/** True only if the signature verifies, the credential tag matches, AND it's unexpired. */
+/**
+ * Validates an admin session token against its signing key, credential, and expiration time.
+ *
+ * @param token - The session token to validate
+ * @param credential - The current admin credential used to verify the credential tag
+ * @param nowSeconds - The current Unix timestamp in seconds
+ * @returns `true` if the token is valid and unexpired, `false` otherwise
+ */
 export async function verifySession(
   token: string | null | undefined,
   signingKey: string,
@@ -61,7 +75,7 @@ export async function verifySession(
   nowSeconds: number,
 ): Promise<boolean> {
   if (!token) return false;
-  const parts = token.split('.');
+  const parts = token.split(".");
   if (parts.length !== 4) return false;
   const [prefix, expStr, tag, sig] = parts;
   if (prefix !== PREFIX) return false;

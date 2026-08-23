@@ -1,7 +1,7 @@
 export type AccessGateDecision =
-  | { action: 'bootstrap' }
-  | { action: 'deny'; message: string }
-  | { action: 'verify'; token: string; teamDomain: string; aud: string };
+  | { action: "bootstrap" }
+  | { action: "deny"; message: string }
+  | { action: "verify"; token: string; teamDomain: string; aud: string };
 
 /**
  * Decide whether a passwordless admin request may enter bootstrap or must pass
@@ -19,14 +19,15 @@ export function accessGateDecision(
   if (accessConfigured) {
     if (!teamDomain || !aud) {
       return {
-        action: 'deny',
-        message: 'Cloudflare Access is misconfigured: set both CF_ACCESS_TEAM_DOMAIN and CF_ACCESS_AUD.',
+        action: "deny",
+        message:
+          "Cloudflare Access is misconfigured: set both CF_ACCESS_TEAM_DOMAIN and CF_ACCESS_AUD.",
       };
     }
     if (!token) {
-      return { action: 'deny', message: 'Cloudflare Access authentication required.' };
+      return { action: "deny", message: "Cloudflare Access authentication required." };
     }
-    return { action: 'verify', token, teamDomain, aud };
+    return { action: "verify", token, teamDomain, aud };
   }
 
   // Never trust an assertion unless this deployment has the issuer + audience
@@ -34,9 +35,9 @@ export function accessGateDecision(
   // password bootstrap remains available.
   if (token) {
     return {
-      action: 'deny',
-      message: 'Cloudflare Access is not configured: set CF_ACCESS_TEAM_DOMAIN and CF_ACCESS_AUD.',
+      action: "deny",
+      message: "Cloudflare Access is not configured: set CF_ACCESS_TEAM_DOMAIN and CF_ACCESS_AUD.",
     };
   }
-  return { action: 'bootstrap' };
+  return { action: "bootstrap" };
 }

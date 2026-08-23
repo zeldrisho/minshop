@@ -1,8 +1,8 @@
-import { defineConfig } from 'astro/config';
-import cloudflare from '@astrojs/cloudflare';
-import tailwindcss from '@tailwindcss/vite';
-import { resolveTheme } from './scripts/themes.mjs';
-import { themeCssPath, writeThemeArtifacts } from './scripts/theme-css.mjs';
+import { defineConfig } from "astro/config";
+import cloudflare from "@astrojs/cloudflare";
+import tailwindcss from "@tailwindcss/vite";
+import { resolveTheme } from "./scripts/themes.mjs";
+import { themeCssPath, writeThemeArtifacts } from "./scripts/theme-css.mjs";
 
 // SSR on Cloudflare Workers. platformProxy lets `astro dev` read bindings
 // (D1, R2, vars) from wrangler.jsonc locally.
@@ -24,13 +24,13 @@ writeThemeArtifacts();
 // selection — without this, `deploy --skip-build` happily deploys whatever
 // design happened to be in dist/, and nothing ever knows.
 const themeStamp = {
-  name: 'minshop:theme-stamp',
+  name: "minshop:theme-stamp",
   hooks: {
-    'astro:build:done': async () => {
-      const { writeFileSync, mkdirSync } = await import('node:fs');
-      mkdirSync(new URL('./dist', import.meta.url).pathname, { recursive: true });
+    "astro:build:done": async () => {
+      const { writeFileSync, mkdirSync } = await import("node:fs");
+      mkdirSync(new URL("./dist", import.meta.url).pathname, { recursive: true });
       writeFileSync(
-        new URL('./dist/theme.json', import.meta.url).pathname,
+        new URL("./dist/theme.json", import.meta.url).pathname,
         `${JSON.stringify({ theme: theme.id }, null, 2)}\n`,
       );
     },
@@ -38,7 +38,7 @@ const themeStamp = {
 };
 
 export default defineConfig({
-  output: 'server',
+  output: "server",
   integrations: [themeStamp],
   // Replaced by the equivalent middleware guard so the bearer-capability
   // /pay/otk_… form can support clients that omit Origin without weakening
@@ -47,19 +47,19 @@ export default defineConfig({
   adapter: cloudflare({
     // Keep Cloudflare Images opt-in. The adapter otherwise auto-provisions an
     // IMAGES binding even though minshop stores and serves originals from R2.
-    imageService: 'passthrough',
+    imageService: "passthrough",
     platformProxy: { enabled: true },
   }),
   vite: {
     plugins: [tailwindcss()],
     resolve: {
       alias: {
-        '#theme': theme.dir,
+        "#theme": theme.dir,
         // The per-theme stylesheet this process compiles. Selection by alias is
         // the point: the files on disk never change per process, only which
         // one global.css's @import resolves to. Tailwind v4's plugin follows
         // Vite aliases in CSS @import (probed before relying on it).
-        '#theme-css': themeCssPath(theme.id),
+        "#theme-css": themeCssPath(theme.id),
       },
     },
   },

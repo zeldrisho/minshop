@@ -1,4 +1,4 @@
-import type { D1Database } from '@cloudflare/workers-types';
+import type { D1Database } from "@cloudflare/workers-types";
 import {
   NOTIFICATION_KINDS,
   claimNotification as claim,
@@ -9,17 +9,21 @@ import {
   isGuestLinkReissueKind,
   reissueGeneration,
   type NotificationKind,
-} from './outboxStore';
+} from "./outboxStore";
 
-export { NOTIFICATION_KINDS, type NotificationKind } from './outboxStore';
-import { getConfig } from '../../config';
-import { getSetting, setSetting, getStoreSettings, type StoreSettings } from '../settings/db';
-import { getOrder, listOrderItemsWithImages } from '../orders/db';
-import { getEmailProvider } from './index';
-import { orderConfirmationEmail, orderNotificationEmail, orderShippedEmail } from './orderConfirmation';
-import { guestLinkReissueEmail } from './guestLinkReissue';
-import { guestOrderUrl, getGuestAccess, sweepAbandonedGuestAccess } from '../orders/guestAccess.ts';
-import { shouldSendCustomerOrderEmail } from './orderPolicy';
+export { NOTIFICATION_KINDS, type NotificationKind } from "./outboxStore";
+import { getConfig } from "../../config";
+import { getSetting, setSetting, getStoreSettings, type StoreSettings } from "../settings/db";
+import { getOrder, listOrderItemsWithImages } from "../orders/db";
+import { getEmailProvider } from "./index";
+import {
+  orderConfirmationEmail,
+  orderNotificationEmail,
+  orderShippedEmail,
+} from "./orderConfirmation";
+import { guestLinkReissueEmail } from "./guestLinkReissue";
+import { guestOrderUrl, getGuestAccess, sweepAbandonedGuestAccess } from "../orders/guestAccess.ts";
+import { shouldSendCustomerOrderEmail } from "./orderPolicy";
 
 /**
  * Transactional-email outbox (see migration 0032). recordPaidOrder commits one
@@ -43,32 +47,33 @@ const SWEEP_MIN_AGE_SECONDS = 120;
 const SWEEP_BATCH = 3;
 
 /**
- * Remember the origin this store is served from.
+ * Stores the request origin for use in customer-facing order links.
  *
- * The scheduled sweep has no request to read an origin off, but emails contain
- * customer-facing order links, so it cannot be guessed — a wrong one ships dead
- * links in real mail. Rather than add a deploy-time field (which this project
- * deliberately avoids: a free-form URL is exactly the typo a wizard would have
- * caught), the origin is learned from live traffic and reused by the cron.
+ * Origins must begin with `http://` or `https://`. Persistence errors are logged
+ * and do not interrupt notification delivery.
  *
- * Written only when it actually changes, so the common case costs one read.
+ * @param origin - The store origin to remember
  */
 export async function rememberStoreUrl(db: D1Database, origin: string): Promise<void> {
   if (!/^https?:\/\//.test(origin)) return;
   try {
-    if ((await getSetting(db, 'store_url')) === origin) return;
-    await setSetting(db, 'store_url', origin);
+    if ((await getSetting(db, "store_url")) === origin) return;
+    await setSetting(db, "store_url", origin);
   } catch (err) {
     // Never let bookkeeping break a delivery.
-    console.error('Recording store_url failed:', err);
+    console.error("Recording store_url failed:", err);
   }
 }
 
 /**
- * Deliver whatever undelivered notifications an order still has. Safe to call
- * from anywhere, any number of times — the claim makes repeats no-ops. This is
- * what closes the old redelivery gap: a webhook retry that finds the order
- * already recorded calls this instead of returning with the emails unsent.
+ * Delivers all supported undelivered notifications for an order.
+ *
+ * Claims each notification to prevent concurrent delivery, skips inapplicable
+ * notifications, and leaves delivery failures retryable.
+ *
+ * @param orderId - The order whose notifications should be delivered
+ * @param origin - The request origin used to construct links in email messages
+ * @param settings - Optional store settings to use for this delivery pass
  */
 export async function deliverOrderNotifications(
   db: D1Database,
@@ -104,7 +109,7 @@ export async function deliverOrderNotifications(
           // delivery, so a temporarily unconfigured provider is a retryable
           // failure (sweep picks it up), never a terminal skip. Reissue also
           // refuses up front when email is off, so this is the rare race.
-          await markFailed(db, orderId, kind, attempts, 'Email provider unavailable');
+          await markFailed(db, orderId, kind, attempts, "Email provider unavailable");
           continue;
         }
         // Email is off for this store: not-applicable, not a failure.
@@ -115,7 +120,7 @@ export async function deliverOrderNotifications(
       if (!order) {
         // Row without an order should be impossible (same-batch insert);
         // treat as terminal rather than retrying forever.
-        await markFailed(db, orderId, kind, attempts, 'Order row not found', true);
+        await markFailed(db, orderId, kind, attempts, "Order row not found", true);
         continue;
       }
       const notifyTo = s.emailNotifyTo || getConfig().email.notifyTo;
@@ -138,7 +143,11 @@ export async function deliverOrderNotifications(
         }
         // Customer email is an allowlisted token position (the ONLY delivery
         // path for a reissued credential — admin output never shows it).
-        const msg = guestLinkReissueEmail(order, storeName, `${origin}/order/${access.access_token}`);
+        const msg = guestLinkReissueEmail(
+          order,
+          storeName,
+          `${origin}/order/${access.access_token}`,
+        );
         await emailer.send({ ...msg, idempotencyKey: `${kind}/${order.public_id ?? orderId}` });
         await markSent(db, orderId, kind, attempts);
         continue;
@@ -147,23 +156,27 @@ export async function deliverOrderNotifications(
       // Shipped notice: queued at fulfillment (label purchase or manual). An
       // order that got UNfulfilled before delivery is skipped, not sent — the
       // promise it makes ("on its way") would be false.
-      if (kind === 'order-shipped') {
+      if (kind === "order-shipped") {
         const applicable =
           Boolean(order.email) &&
           shouldSendCustomerOrderEmail(order.payment_method) &&
-          order.fulfillment_status === 'fulfilled';
+          order.fulfillment_status === "fulfilled";
         if (!applicable) {
           await markSkipped(db, orderId, kind, attempts);
           continue;
         }
-        const msg = orderShippedEmail(order, storeName, await guestOrderUrl(db, order.public_id, origin));
+        const msg = orderShippedEmail(
+          order,
+          storeName,
+          await guestOrderUrl(db, order.public_id, origin),
+        );
         await emailer.send({ ...msg, idempotencyKey: `${kind}/${order.public_id ?? orderId}` });
         await markSent(db, orderId, kind, attempts);
         continue;
       }
 
       const applicable =
-        kind === 'customer-receipt'
+        kind === "customer-receipt"
           ? Boolean(order.email) && shouldSendCustomerOrderEmail(order.payment_method)
           : Boolean(notifyTo);
       if (!applicable) {
@@ -172,7 +185,7 @@ export async function deliverOrderNotifications(
       }
       items ??= await listOrderItemsWithImages(db, orderId);
       const msg =
-        kind === 'customer-receipt'
+        kind === "customer-receipt"
           ? orderConfirmationEmail(
               order,
               items,
@@ -192,17 +205,19 @@ export async function deliverOrderNotifications(
       await emailer.send({ ...msg, idempotencyKey: `${kind}/${order.public_id ?? orderId}` });
       await markSent(db, orderId, kind, attempts);
     } catch (err) {
-      console.error(`Order notification ${kind}/${order?.public_id ?? '(unresolved order)'} failed:`, err);
+      console.error(
+        `Order notification ${kind}/${order?.public_id ?? "(unresolved order)"} failed:`,
+        err,
+      );
       await markFailed(db, orderId, kind, attempts, err);
     }
   }
 }
 
 /**
- * Recover a few stale rows: expired-lease claims from dead deliverers, and
- * pending rows old enough that their own settlement clearly isn't coming back
- * for them. Piggybacks on live settlements (no cron in the Astro worker yet),
- * so it is deliberately tiny — a backlog drains a little on every sale.
+ * Recovers stale order notifications and reconciles abandoned guest access records.
+ *
+ * @param origin - The request origin used when delivering recovered notifications
  */
 export async function sweepStaleNotifications(db: D1Database, origin: string): Promise<void> {
   // Piggyback the guest-credential reconciliation here too: same cadence and
@@ -211,7 +226,7 @@ export async function sweepStaleNotifications(db: D1Database, origin: string): P
   try {
     await sweepAbandonedGuestAccess(db);
   } catch (err) {
-    console.error('Guest-access sweep failed:', err);
+    console.error("Guest-access sweep failed:", err);
   }
   const { results } = await db
     .prepare(

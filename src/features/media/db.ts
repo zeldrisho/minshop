@@ -1,5 +1,5 @@
-import type { D1Database } from '@cloudflare/workers-types';
-import { withPublicId } from '../ids/publicId.ts';
+import type { D1Database } from "@cloudflare/workers-types";
+import { withPublicId } from "../ids/publicId.ts";
 
 export interface Media {
   id: number;
@@ -18,34 +18,53 @@ export interface Media {
 /** Grid/picker page size. Bounds both the admin page and the JSON API. */
 export const MEDIA_PAGE_SIZE = 48;
 
+/**
+ * Retrieves media by its numeric identifier.
+ *
+ * @param id - The media record identifier
+ * @returns The matching media record, or `null` if no record exists
+ */
 export async function getMedia(db: D1Database, id: number): Promise<Media | null> {
-  return db.prepare('SELECT * FROM media WHERE id = ?').bind(id).first<Media>();
+  return db.prepare("SELECT * FROM media WHERE id = ?").bind(id).first<Media>();
 }
 
+/**
+ * Finds media by its image key.
+ *
+ * @param key - The image key to search for
+ * @returns The matching media record, or `null` if no record exists
+ */
 export async function getMediaByKey(db: D1Database, key: string): Promise<Media | null> {
-  return db.prepare('SELECT * FROM media WHERE image_key = ?').bind(key).first<Media>();
+  return db.prepare("SELECT * FROM media WHERE image_key = ?").bind(key).first<Media>();
 }
 
 /** Media by its prefixed public ID (boundary resolution; null if missing). */
 export async function getMediaByPublicId(db: D1Database, publicId: string): Promise<Media | null> {
-  return db.prepare('SELECT * FROM media WHERE public_id = ?').bind(publicId).first<Media>();
+  return db.prepare("SELECT * FROM media WHERE public_id = ?").bind(publicId).first<Media>();
 }
 
-/** Newest first, matching the media_created index so pagination is stable. */
-export async function listMedia(
-  db: D1Database,
-  limit: number,
-  offset: number,
-): Promise<Media[]> {
+/**
+ * Lists media records in descending creation order with pagination.
+ *
+ * @param limit - Maximum number of records to return
+ * @param offset - Number of records to skip
+ * @returns The matching media records
+ */
+export async function listMedia(db: D1Database, limit: number, offset: number): Promise<Media[]> {
   const { results } = await db
-    .prepare('SELECT * FROM media ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?')
+    .prepare("SELECT * FROM media ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?")
     .bind(limit, offset)
     .all<Media>();
   return results ?? [];
 }
 
+/**
+ * Counts all media records.
+ *
+ * @returns The total number of media records.
+ */
 export async function countMedia(db: D1Database): Promise<number> {
-  const row = await db.prepare('SELECT COUNT(*) AS c FROM media').first<{ c: number }>();
+  const row = await db.prepare("SELECT COUNT(*) AS c FROM media").first<{ c: number }>();
   return row?.c ?? 0;
 }
 
@@ -56,13 +75,18 @@ export async function countMedia(db: D1Database): Promise<number> {
  */
 const MAX_BOUND_PARAMS = 90; // headroom under D1's hard limit of 100
 
-/** Resolve media rows for a set of keys (used when parsing Markdown bodies). */
+/**
+ * Finds media records matching the specified image keys.
+ *
+ * @param keys - The image keys to resolve.
+ * @returns The matching media records.
+ */
 export async function findMediaByKeys(db: D1Database, keys: string[]): Promise<Media[]> {
   if (keys.length === 0) return [];
   const found: Media[] = [];
   for (let i = 0; i < keys.length; i += MAX_BOUND_PARAMS) {
     const chunk = keys.slice(i, i + MAX_BOUND_PARAMS);
-    const placeholders = chunk.map(() => '?').join(', ');
+    const placeholders = chunk.map(() => "?").join(", ");
     const { results } = await db
       .prepare(`SELECT * FROM media WHERE image_key IN (${placeholders})`)
       .bind(...chunk)
@@ -72,6 +96,12 @@ export async function findMediaByKeys(db: D1Database, keys: string[]): Promise<M
   return found;
 }
 
+/**
+ * Creates a media record with a generated public ID.
+ *
+ * @param fields - The media metadata and optional dimensions to store
+ * @returns The created media record
+ */
 export async function createMediaRecord(
   db: D1Database,
   fields: {
@@ -83,7 +113,7 @@ export async function createMediaRecord(
     height?: number | null;
   },
 ): Promise<Media> {
-  return withPublicId('media', async (publicId) => {
+  return withPublicId("media", async (publicId) => {
     const row = await db
       .prepare(
         `INSERT INTO media (image_key, original_name, mime_type, size_bytes, width, height, public_id)
@@ -100,27 +130,18 @@ export async function createMediaRecord(
         publicId,
       )
       .first<Media>();
-    if (!row) throw new Error('media insert returned no row');
+    if (!row) throw new Error("media insert returned no row");
     return row;
   });
 }
 
 /**
- * Delete a media row ONLY while nothing references it, in one statement.
+ * Deletes a media record when it has no product, page, or logo references.
  *
- * Every usage condition is repeated inside the DELETE rather than checked first,
- * because a check-then-delete leaves a window where an association is created
- * between the two. Single statements are atomic, so an association write racing
- * this either commits first (and NOT EXISTS sees it, refusing) or loses (and its
- * own guard finds no media row). Neither order can produce a dangling reference.
- *
- * Returns the deleted key, or null when the row was referenced or already gone —
- * the caller resolves which for the error message.
+ * @param id - The numeric ID of the media record
+ * @returns The deleted media image key, or `null` if the record does not exist or is referenced
  */
-export async function deleteMediaRecord(
-  db: D1Database,
-  id: number,
-): Promise<string | null> {
+export async function deleteMediaRecord(db: D1Database, id: number): Promise<string | null> {
   const row = await db
     .prepare(
       `DELETE FROM media
@@ -145,26 +166,19 @@ export async function deleteMediaRecord(
   return row?.image_key ?? null;
 }
 
-export type AttachResult =
-  | { ok: true; imageKey: string }
-  | { ok: false; error: string };
+export type AttachResult = { ok: true; imageKey: string } | { ok: false; error: string };
 
 /**
- * Append a media item to a product's gallery, guarded on the media row still
- * existing and on the product not already holding that key.
+ * Adds a media item to a product's gallery when the media exists and is not already attached.
  *
- * Both conditions live inside the INSERT for the same reason the delete is
- * guarded: a media row is deletable right up until an association exists, so a
- * separate existence check could pass and then be invalidated. This is used by
- * the upload paths too — a just-created row is unreferenced, and therefore
- * deletable, until this lands.
+ * @returns The attached image key on success, or an error describing why the attachment failed.
  */
 export async function attachMediaToProduct(
   db: D1Database,
   productId: number,
   mediaId: number,
 ): Promise<AttachResult> {
-  const row = await withPublicId('productImage', (publicId) =>
+  const row = await withPublicId("productImage", (publicId) =>
     db
       .prepare(
         `INSERT INTO product_images (product_id, image_key, position, public_id)
@@ -190,8 +204,8 @@ export async function attachMediaToProduct(
   // Nothing inserted — say which of the two guards refused.
   const media = await getMedia(db, mediaId);
   return media
-    ? { ok: false, error: 'That image is already in this product’s gallery.' }
-    : { ok: false, error: 'That image is no longer in the media library.' };
+    ? { ok: false, error: "That image is already in this product’s gallery." }
+    : { ok: false, error: "That image is no longer in the media library." };
 }
 
 /**
@@ -223,12 +237,19 @@ export async function pageImageDimensions(
   return new Map((results ?? []).map((r) => [r.image_key, { width: r.width, height: r.height }]));
 }
 
+/**
+ * Builds statements to replace a page's media associations.
+ *
+ * @param pageId - The page whose media associations are replaced
+ * @param mediaIds - The media IDs to associate with the page
+ * @returns Prepared statements that remove existing associations and insert existing media associations in parameter-limited batches
+ */
 export function pageMediaClaimStatements(
   db: D1Database,
   pageId: number,
   mediaIds: number[],
 ): D1PreparedStatement[] {
-  const statements = [db.prepare('DELETE FROM page_media WHERE page_id = ?').bind(pageId)];
+  const statements = [db.prepare("DELETE FROM page_media WHERE page_id = ?").bind(pageId)];
 
   // One statement per CHUNK, not per image. D1 allows only 50 queries per
   // Worker invocation on the Free plan, and a save already spends several on
@@ -237,7 +258,7 @@ export function pageMediaClaimStatements(
   // on exactly the plan this project targets.
   for (let i = 0; i < mediaIds.length; i += MAX_BOUND_PARAMS - 1) {
     const chunk = mediaIds.slice(i, i + MAX_BOUND_PARAMS - 1); // -1 for pageId
-    const placeholders = chunk.map(() => '?').join(', ');
+    const placeholders = chunk.map(() => "?").join(", ");
     statements.push(
       // INSERT ... SELECT FROM media so a concurrently deleted row is skipped
       // rather than written as a dangling association.

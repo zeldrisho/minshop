@@ -1,16 +1,16 @@
-import { getConfig } from '../../config';
-import type { Order } from '../orders/db';
-import { orderReference } from '../orders/number';
-import type { EmailMessage } from './provider';
-import { PALETTE, emailShell, emailButton, escapeHtml } from './layout';
+import { getConfig } from "../../config";
+import type { Order } from "../orders/db";
+import { orderReference } from "../orders/number";
+import type { EmailMessage } from "./provider";
+import { PALETTE, emailShell, emailButton, escapeHtml } from "./layout";
 
 /**
- * Build the guest-link reissue email. Sent when support rotates an order's
- * access token (a reported forwarded/leaked link): the previous links stop
- * working the moment the rotation lands, so this message is the only path the
- * replacement credential is allowed to travel — admin output never shows it.
- * `guestOrderUrl` is the tokenized /order/<token> link, an allowlisted
- * customer-email token position. `order.email` must be set.
+ * Creates an email containing a replacement guest access link for an order.
+ *
+ * @param order - The order receiving the replacement link
+ * @param storeName - The store name displayed in the email
+ * @param guestOrderUrl - The replacement URL for accessing the order
+ * @returns An email message addressed to the order's email address
  */
 export function guestLinkReissueEmail(
   order: Order,
@@ -27,16 +27,16 @@ export function guestLinkReissueEmail(
     ``,
     `If you didn't ask for a new link, you can ignore this email; the new link`,
     `still shows your order as usual.`,
-  ].join('\n');
+  ].join("\n");
 
   const html = emailShell({
     storeName,
-    heading: 'Your new order link',
+    heading: "Your new order link",
     subheading: `A fresh link for order #${escapeHtml(num)}.`,
     body:
       `<p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:${PALETTE.muted};">` +
       `Any links from earlier emails no longer work — use this one from now on.</p>` +
-      emailButton(guestOrderUrl, 'View your order'),
+      emailButton(guestOrderUrl, "View your order"),
     footer: `If you didn't ask for a new link, you can ignore this email.`,
   });
 

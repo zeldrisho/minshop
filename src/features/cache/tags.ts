@@ -1,8 +1,8 @@
-import { isPublicCatalogApi, isPublicStorefrontPath } from './public';
+import { isPublicCatalogApi, isPublicStorefrontPath } from "./public";
 
 export const CACHE_TAG = {
-  catalog: 'catalog',
-  shell: 'shell',
+  catalog: "catalog",
+  shell: "shell",
   product: (publicId: string) => `product:${publicId}`,
 } as const;
 
@@ -23,14 +23,19 @@ export function normalizeCacheTags(tags: Iterable<string>): string[] {
   return normalized.sort();
 }
 
-/** Merge tags without discarding route-specific product tags. */
+/**
+ * Merges tags into the `Cache-Tag` header while preserving existing tags.
+ *
+ * @param headers - The response headers whose `Cache-Tag` header is updated
+ * @param tags - The tags to add
+ */
 export function addCacheTags(headers: Headers, tags: Iterable<string>): void {
-  const existing = (headers.get('cache-tag') ?? '')
-    .split(',')
+  const existing = (headers.get("cache-tag") ?? "")
+    .split(",")
     .map((tag) => tag.trim())
     .filter(Boolean);
   const merged = normalizeCacheTags([...existing, ...tags]);
-  if (merged.length > 0) headers.set('cache-tag', merged.join(','));
+  if (merged.length > 0) headers.set("cache-tag", merged.join(","));
 }
 
 /** Tags shared by every cacheable response in a public route family. */
@@ -46,10 +51,16 @@ export function responseCacheTags(pathname: string, status: number): string[] {
   return [];
 }
 
+/**
+ * Creates normalized product cache tags from valid public product IDs.
+ *
+ * @param publicIds - Product IDs to convert into cache tags.
+ * @returns The normalized product cache tags for valid IDs.
+ */
 export function productCacheTags(publicIds: Iterable<string | null | undefined>): string[] {
   return normalizeCacheTags(
     [...publicIds]
-      .filter((publicId): publicId is string => /^prod_[0-9a-z]+$/.test(publicId ?? ''))
+      .filter((publicId): publicId is string => /^prod_[0-9a-z]+$/.test(publicId ?? ""))
       .map(CACHE_TAG.product),
   );
 }

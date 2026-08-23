@@ -1,11 +1,10 @@
 /**
- * Public URL for a stored object. The single place that knows how a media key
- * becomes a URL, so products, pages, and branding cannot drift apart.
+ * Constructs the public URL for a stored media object.
  *
- * With `baseUrl` set (config.images.baseUrl, from IMAGE_BASE_URL — e.g. an R2
- * custom domain) it returns an absolute URL that bypasses the Worker's /images
- * route; otherwise a root-relative `/images/...` path.
+ * @param imageKey - The stored media object's key
+ * @param baseUrl - Optional base URL for generating an absolute URL
+ * @returns An absolute URL when `baseUrl` is provided; otherwise, a root-relative `/images/{imageKey}` path
  */
-export function mediaUrl(imageKey: string, baseUrl = ''): string {
+export function mediaUrl(imageKey: string, baseUrl = ""): string {
   return baseUrl ? `${baseUrl}/${imageKey}` : `/images/${imageKey}`;
 }

@@ -15,17 +15,23 @@
  * Token matching is case-sensitive, unlike public IDs.
  */
 
-const B64URL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+const B64URL = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
-export const ACCESS_TOKEN_PREFIX = 'otk_';
+export const ACCESS_TOKEN_PREFIX = "otk_";
 
 /** Strict shape check: otk_ + 22 base64url chars ending in A/Q/g/w. */
 const TOKEN_RE = /^otk_[A-Za-z0-9_-]{21}[AQgw]$/;
 
+/**
+ * Encodes 16 bytes as a canonical 22-character base64url string.
+ *
+ * @param bytes - The 16-byte value to encode
+ * @returns The base64url-encoded value with zero-filled unused bits
+ */
 function encodeBase64Url128(bytes: Uint8Array): string {
   // 16 bytes -> 22 chars: pack 6 bits at a time; the final char holds the last
   // 2 bits in its HIGH positions (low 4 bits zero -> canonical).
-  let out = '';
+  let out = "";
   let acc = 0;
   let accBits = 0;
   for (const b of bytes) {
@@ -61,16 +67,22 @@ export function generateAccessToken(): string {
   }
 }
 
-/** Case-sensitive, canonical-form-only. No normalization — tokens are pasted, not typed. */
+/**
+ * Validates whether a value is a canonical, case-sensitive access token.
+ *
+ * @param value - The value to validate
+ * @returns `true` if `value` is a valid access token, `false` otherwise
+ */
 export function isAccessToken(value: unknown): value is string {
-  return typeof value === 'string' && TOKEN_RE.test(value);
+  return typeof value === "string" && TOKEN_RE.test(value);
 }
 
 /**
- * Replace anything token-shaped with otk_REDACTED. Authoritative app-level
- * redaction for log/error paths; platform trace-event redaction is
- * defense-in-depth on top.
+ * Redacts access-token-shaped substrings from text.
+ *
+ * @param text - The text containing potential access tokens
+ * @returns The text with matching substrings replaced by `otk_REDACTED`
  */
 export function redactAccessTokens(text: string): string {
-  return text.replace(/otk_[A-Za-z0-9_-]{22}/g, 'otk_REDACTED');
+  return text.replace(/otk_[A-Za-z0-9_-]{22}/g, "otk_REDACTED");
 }

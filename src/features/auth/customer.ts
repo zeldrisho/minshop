@@ -1,10 +1,10 @@
-import { env } from 'cloudflare:workers';
-import type { AstroCookies } from 'astro';
-import { getConfig } from '../../config';
-import { getSetting } from '../settings/db';
-import { getEmailProvider } from '../email';
-import { loginLinkEmail } from '../email/loginLink';
-import { signToken, verifyToken } from './token';
+import { env } from "cloudflare:workers";
+import type { AstroCookies } from "astro";
+import { getConfig } from "../../config";
+import { getSetting } from "../settings/db";
+import { getEmailProvider } from "../email";
+import { loginLinkEmail } from "../email/loginLink";
+import { signToken, verifyToken } from "./token";
 
 /**
  * Passwordless customer auth (magic-link). Default adapter for the storefront
@@ -15,19 +15,19 @@ import { signToken, verifyToken } from './token';
  */
 const MAGIC_TTL = 15 * 60; // login link valid 15 min
 const SESSION_TTL = 30 * 24 * 3600; // session cookie valid 30 days
-const COOKIE = 'customer_session';
+const COOKIE = "customer_session";
 
 const now = () => Date.now() / 1000;
 const normalize = (email: string) => email.trim().toLowerCase();
 
 /**
- * Accounts are usable only when the feature is on AND the signing secret is set.
- * The on/off flag is the Settings → Features toggle (D1 `accounts_enabled`),
- * falling back to the build-time `features.accounts` default when unset.
+ * Determines whether customer accounts can be used.
+ *
+ * @returns `true` if accounts are enabled, a signing secret is configured, and an email provider is available; `false` otherwise.
  */
 export async function accountsEnabled(): Promise<boolean> {
-  const override = await getSetting(env.DB, 'accounts_enabled');
-  const on = override == null ? getConfig().features.accounts : override === '1';
+  const override = await getSetting(env.DB, "accounts_enabled");
+  const on = override == null ? getConfig().features.accounts : override === "1";
   if (!on || !env.AUTH_SECRET) return false;
   return (await getEmailProvider()) !== null;
 }
@@ -37,10 +37,9 @@ export function isValidEmail(email: string): boolean {
 }
 
 /**
- * Email a magic sign-in link. From the caller's view this always "succeeds" — we
- * never reveal whether anything is attached to the address (there's no account
- * record to enumerate). In dev the link is also logged so you can test without
- * email delivery.
+ * Sends a passwordless sign-in link for the specified email address.
+ *
+ * @param origin - The base URL used to construct the verification link
  */
 export async function requestLogin(email: string, origin: string): Promise<void> {
   const secret = env.AUTH_SECRET;
@@ -54,10 +53,10 @@ export async function requestLogin(email: string, origin: string): Promise<void>
   const emailer = await getEmailProvider();
   if (emailer) {
     try {
-      const storeName = (await getSetting(env.DB, 'store_name')) || getConfig().storeName;
+      const storeName = (await getSetting(env.DB, "store_name")) || getConfig().storeName;
       await emailer.send(loginLinkEmail(addr, link, storeName));
     } catch (err) {
-      console.error('Login email failed:', err);
+      console.error("Login email failed:", err);
     }
   }
 }
@@ -69,7 +68,12 @@ export async function verifyLoginToken(token: string | null): Promise<string | n
   return verifyToken(token, secret, now());
 }
 
-/** Issue the signed session cookie for a verified email. */
+/**
+ * Creates a signed session token and stores it in the customer session cookie.
+ *
+ * @param email - The verified customer email associated with the session
+ * @param secure - Whether the cookie should only be sent over secure connections
+ */
 export async function setCustomerSession(
   cookies: AstroCookies,
   email: string,
@@ -81,14 +85,19 @@ export async function setCustomerSession(
   cookies.set(COOKIE, token, {
     httpOnly: true,
     secure,
-    sameSite: 'lax',
-    path: '/',
+    sameSite: "lax",
+    path: "/",
     maxAge: SESSION_TTL,
   });
 }
 
+/**
+ * Clears the customer's session cookie.
+ *
+ * @param cookies - The cookies used to remove the session cookie
+ */
 export function clearCustomerSession(cookies: AstroCookies): void {
-  cookies.delete(COOKIE, { path: '/' });
+  cookies.delete(COOKIE, { path: "/" });
 }
 
 /** The logged-in customer's email (verified session cookie), or null. */

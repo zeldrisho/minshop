@@ -19,12 +19,19 @@ export interface ImageDimensions {
 /** Enough for every header below; WebP's VP8X sits within the first 30 bytes. */
 export const HEADER_BYTES = 64 * 1024;
 
+/**
+ * Reads the dimensions of a PNG, GIF, WebP, or JPEG image.
+ *
+ * @param bytes - The image data to inspect
+ * @returns The image width and height, or `null` if the format is unsupported or invalid
+ */
 export function readImageDimensions(bytes: Uint8Array): ImageDimensions | null {
   return png(bytes) ?? gif(bytes) ?? webp(bytes) ?? jpeg(bytes);
 }
 
 const u16be = (b: Uint8Array, i: number) => (b[i] << 8) | b[i + 1];
-const u32be = (b: Uint8Array, i: number) => ((b[i] << 24) | (b[i + 1] << 16) | (b[i + 2] << 8) | b[i + 3]) >>> 0;
+const u32be = (b: Uint8Array, i: number) =>
+  ((b[i] << 24) | (b[i + 1] << 16) | (b[i + 2] << 8) | b[i + 3]) >>> 0;
 const u16le = (b: Uint8Array, i: number) => b[i] | (b[i + 1] << 8);
 const u24le = (b: Uint8Array, i: number) => b[i] | (b[i + 1] << 8) | (b[i + 2] << 16);
 
@@ -46,10 +53,12 @@ function gif(b: Uint8Array): ImageDimensions | null {
 }
 
 /**
- * WebP: "RIFF" .... "WEBP", then one of three chunk layouts.
- *   VP8  — lossy: dimensions are 14-bit values after a 3-byte start code.
- *   VP8L — lossless: 14-bit width/height packed into 32 bits, minus one.
- *   VP8X — extended: 24-bit canvas size, minus one.
+ * Extracts dimensions from a WebP image.
+ *
+ * Supports lossy, lossless, and extended WebP chunk layouts.
+ *
+ * @param b - The encoded WebP image data
+ * @returns The image dimensions, or `null` if the data is invalid or unsupported
  */
 function webp(b: Uint8Array): ImageDimensions | null {
   if (!matches(b, 0, [0x52, 0x49, 0x46, 0x46]) || !matches(b, 8, [0x57, 0x45, 0x42, 0x50])) {
@@ -57,20 +66,23 @@ function webp(b: Uint8Array): ImageDimensions | null {
   }
   const chunk = String.fromCharCode(b[12], b[13], b[14], b[15]);
 
-  if (chunk === 'VP8 ' && b.length >= 30) {
+  if (chunk === "VP8 " && b.length >= 30) {
     // 0x9d 0x01 0x2a is the keyframe start code; sizes follow it.
     if (!matches(b, 23, [0x9d, 0x01, 0x2a])) return null;
     return valid(u16le(b, 26) & 0x3fff, u16le(b, 28) & 0x3fff);
   }
-  if (chunk === 'VP8L' && b.length >= 25) {
+  if (chunk === "VP8L" && b.length >= 25) {
     if (b[20] !== 0x2f) return null; // signature byte
     const bits = u32be(b, 21);
     // Stored little-endian as a bit field: 14 bits width, then 14 bits height.
-    const packed = ((bits >>> 24) & 0xff) | (((bits >>> 16) & 0xff) << 8) |
-      (((bits >>> 8) & 0xff) << 16) | ((bits & 0xff) << 24);
+    const packed =
+      ((bits >>> 24) & 0xff) |
+      (((bits >>> 16) & 0xff) << 8) |
+      (((bits >>> 8) & 0xff) << 16) |
+      ((bits & 0xff) << 24);
     return valid((packed & 0x3fff) + 1, ((packed >>> 14) & 0x3fff) + 1);
   }
-  if (chunk === 'VP8X' && b.length >= 30) {
+  if (chunk === "VP8X" && b.length >= 30) {
     return valid(u24le(b, 24) + 1, u24le(b, 27) + 1);
   }
   return null;
