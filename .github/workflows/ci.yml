@@ -1,4 +1,4 @@
-name: Verify
+name: CI
 
 on:
   pull_request:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: verify-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -63,7 +63,7 @@ jobs:
         id: discover
         run: |
           themes=$(node --input-type=module -e "
-            import { discoverThemeIds, resolveConfiguredTheme } from './scripts/theme/themes.mjs';
+            import { discoverThemeIds, resolveConfiguredTheme } from './scripts/theme/themes.ts';
             const configured = resolveConfiguredTheme().id;
             console.log(JSON.stringify(discoverThemeIds().filter((id) => id !== configured)));
           ")
