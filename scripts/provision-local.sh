@@ -9,7 +9,7 @@
 # (This is the local counterpart to provision-cf.sh, which creates a cloud instance.)
 #
 #   Usage:  scripts/provision-local.sh [--seed] [--no-build]
-#   --seed:     load ./seed.sql after migrating.
+#   --seed:     load ./db/seeds/seed.sql after migrating.
 #   --no-build: skip `astro build` (reuse the existing dist/ — faster reruns).
 #
 # Auto-generates SECRETS_KEK + AUTH_SECRET into .dev.vars if missing (idempotent),
@@ -62,8 +62,8 @@ echo "▸ [2/2] Migrating + seeding the local D1…"
 # CI=1 → wrangler skips the interactive "apply N migrations?" confirmation.
 CI=1 $W d1 migrations apply DB --local
 if [[ "$SEED" == "1" ]]; then
-  [[ -f seed.sql ]] && $W d1 execute DB --local --file=./seed.sql \
-    || echo "  (--seed given but ./seed.sql not found — skipped)"
+  [[ -f db/seeds/seed.sql ]] && $W d1 execute DB --local --file=./db/seeds/seed.sql \
+    || echo "  (--seed given but ./db/seeds/seed.sql not found — skipped)"
 fi
 
 cat <<EOF

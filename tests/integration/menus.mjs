@@ -67,7 +67,7 @@ const PRE_MENU_SCHEMA = `
 
 // The real migration text, so the seed under test is the one that ships.
 const MIGRATION = readFileSync(
-  new URL("../../migrations/0028_nav_menus.sql", import.meta.url),
+  new URL("../../db/migrations/0028_nav_menus.sql", import.meta.url),
   "utf8",
 );
 
