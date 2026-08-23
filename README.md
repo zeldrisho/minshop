@@ -5,7 +5,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/create-minshop)](https://www.npmjs.com/package/create-minshop)
 [![License: MIT](https://img.shields.io/github/license/ddyy/minshop)](LICENSE)
 
-> **Fork of [`ddyy/minshop`](https://github.com/ddyy/minshop)** — community-maintained. See [Fork notes](#fork-notes) and [`docs/`](docs/) (`docs/customizing.md` is this fork's copy of the former `CUSTOMIZING.md`).
+<p><em>Community fork — see <code>docs/</code> for development, architecture, security, and API docs.</em></p>
 
 An open-source store an agent can pay for itself. Agents read the catalog and pay a Lightning invoice with no human in the loop — over plain JSON or over MCP; people check out the normal way with Stripe. Merchants can run the store over MCP too.
 
@@ -54,7 +54,6 @@ Details: [`docs/architecture.md`](docs/architecture.md), [`docs/api.md`](docs/ap
 ## Quick start (local)
 
 ```sh
-nvm use 22
 vp install
 vp run provision:local -- --seed  # migrate + seed + generate SECRETS_KEK + AUTH_SECRET
 vp run dev                         # http://localhost:4321
@@ -100,15 +99,6 @@ Build-time themes in `src/themes/<theme>/tokens.css` (`@theme` block) + `src/sty
 | Testing strategy                       | [`docs/testing.md`](docs/testing.md)                         |
 | Recipes — how to add X                 | [`docs/recipes.md`](docs/recipes.md)                         |
 | Storefront customization               | [`docs/customizing.md`](docs/customizing.md)                 |
-
-Upstream customizing/theming detail that was in the README now lives in `docs/` — the README is the entrypoint, not the manual.
-
-## Fork notes
-
-This repository is a fork of [`ddyy/minshop`](https://github.com/ddyy/minshop).
-
-- **Upstream pull:** keep `src/config.ts` upstream-owned; put shop overrides in `src/store.config.ts` so merges stay clean.
-- **Docs for this fork:** [`docs/development.md`](docs/development.md) · [`docs/architecture.md`](docs/architecture.md) · [`docs/security-invariants.md`](docs/security-invariants.md) · [`docs/api.md`](docs/api.md) · [`docs/testing.md`](docs/testing.md) · [`docs/recipes.md`](docs/recipes.md) · [`docs/customizing.md`](docs/customizing.md) (moved from root `CUSTOMIZING.md`)
 
 ## Cost
 
