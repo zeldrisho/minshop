@@ -14,7 +14,7 @@
 #
 # Auto-generates SECRETS_KEK + AUTH_SECRET into .dev.vars if missing (idempotent),
 # so the encrypted key vault and admin sessions work locally with no manual setup.
-# Reset this repo's local data with:  npm run destroy:local
+# Reset this repo's local data with:  vp run destroy:local
 set -euo pipefail
 
 SEED=0
@@ -30,7 +30,7 @@ done
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-W="npx --yes wrangler"
+W="vp exec wrangler"
 GEN="dist/server/wrangler.json"        # adapter-generated config (has main + bindings)
 
 # Locally there's no Worker secret store — secrets come from .dev.vars. Generate the
@@ -52,7 +52,7 @@ ensure_devvar AUTH_SECRET
 
 if [[ "$BUILD" == "1" || ! -f "$GEN" ]]; then
   echo "▸ [1/2] Building (astro build)…"
-  npx --yes astro build
+  vp exec astro build
 else
   echo "▸ [1/2] Skipping build (--no-build); reusing $GEN"
 fi
@@ -72,9 +72,9 @@ cat <<EOF
 
   Start it (PROD mode — admin gate active) with:
 
-    npm run preview                 # add -- --port N for a custom port
+    vp run preview                 # add -- --port N for a custom port
 
   Then: http://localhost:8787/   ·   admin http://localhost:8787/admin/setup
-  Reset local data:  npm run destroy:local
+  Reset local data:  vp run destroy:local
   Another store:     copy this repo to another directory and run provision:local there
 EOF

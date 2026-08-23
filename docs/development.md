@@ -11,8 +11,7 @@ How to build, run, and contribute to this fork of **minshop**.
 ## Install
 
 ```sh
-vp install
-vp install --prefix mcp   # MCP Worker has its own package.json (or: pnpm --prefix mcp install)
+vp install   # installs storefront + mcp/ workspace (single pnpm lockfile, isolated mcp deps)
 ```
 
 ## Local development
@@ -59,8 +58,10 @@ vp run db:migrate:remote  # apply to production D1
 Provisioning a fresh instance:
 
 ```sh
-npm create minshop@latest my-store
-npx wrangler login
+git clone https://github.com/ddyy/minshop.git my-store
+cd my-store
+vp install
+vp exec wrangler login
 vp run provision:cf my-store
 # or manually: wrangler d1 create / r2 bucket create / wrangler secret put ...
 ```
@@ -79,7 +80,7 @@ vp run provision:cf my-store
 - New payment rails = one adapter implementing `PaymentProvider` + factory wiring.
 - New tests ride along with behavior changes.
 - Run `vp run verify` after every meaningful edit; run `git diff --check` + `git status --short` before handoff.
-- Migrations: `npx wrangler d1 migrations create minshop-db <name>` → edit → `vp run db:migrate`.
+- Migrations: `vp exec wrangler d1 migrations create minshop-db <name>` → edit → `vp run db:migrate`.
 
 ## Gotchas
 
@@ -88,5 +89,5 @@ vp run provision:cf my-store
 - CSRF on POST: browsers send `Origin` automatically; `curl` needs `-H "Origin: http://localhost:4321"`.
 - Webhooks need `constructEventAsync` (Stripe) — sync verifier uses Node crypto, absent on Workers.
 - FTS5 `MATCH` throws on raw input — sanitize to alphanumeric prefix tokens.
-- `wrangler d1 export` fails with FTS5 — drop `products_fts`, export, re-run migration `0003`.
+- `vp exec wrangler d1 export` fails with FTS5 — drop `products_fts`, export, re-run migration `0003`.
 - MCP deps live in `mcp/` only — adding `agents`/`@modelcontextprotocol/sdk` to root breaks the Astro build.

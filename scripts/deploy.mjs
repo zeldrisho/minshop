@@ -137,10 +137,10 @@ async function purgeAfterDeploy(origin, secret) {
 const ops = {
   expectedTheme: theme.id,
   readStamp: () => (existsSync(stampPath) ? readFileSync(stampPath, "utf8") : null),
-  build: () => run("npx", ["astro", "build"]),
+  build: () => run("vp", ["exec", "astro", "build"]),
   loadCacheConfig: () => deploymentCacheConfig(),
-  migrate: () => run("npx", ["wrangler", "d1", "migrations", "apply", "DB", "--remote"]),
-  deploy: () => run("npx", ["wrangler", "deploy"]),
+  migrate: () => run("vp", ["exec", "wrangler", "d1", "migrations", "apply", "DB", "--remote"]),
+  deploy: () => run("vp", ["exec", "wrangler", "deploy"]),
   purge: (cacheConfig) => purgeAfterDeploy(cacheConfig.origin, cacheConfig.secret),
 };
 
