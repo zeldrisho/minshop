@@ -47,40 +47,19 @@ export const noObjectParametersRule = defineRule({
 		},
 	},
 	createOnce(context) {
-		const programAliases = new Map<string, ESTree.TSType>();
-
-		const resolveLexicalAlias = (
-			name: string,
-			fromNode: ESTree.Node,
-		): ESTree.TSType | undefined => {
-			let current: ESTree.Node | null = fromNode;
-			while (current !== null && current.type !== "Program") {
-				if (
-					(current.type === "TSTypeAliasDeclaration" ||
-						current.type === "TSInterfaceDeclaration") &&
-					current.id.name === name
-				) {
-					return current.type === "TSTypeAliasDeclaration"
-						? current.typeAnnotation
-						: undefined;
-				}
-				current = current.parent;
-			}
-			return programAliases.get(name);
-		};
+		const aliases = new Map<string, ESTree.TSType>();
 
 		const resolvesToObject = (
 			type: ESTree.TSType,
-			fromNode: ESTree.Node,
 			shadowedAliases: ReadonlySet<string>,
 			visited = new Set<string>(),
 		): boolean => {
 			if (type.type === "TSObjectKeyword") return true;
 			if (type.type === "TSParenthesizedType")
-				return resolvesToObject(type.typeAnnotation, fromNode, shadowedAliases, visited);
+				return resolvesToObject(type.typeAnnotation, shadowedAliases, visited);
 			if (type.type === "TSUnionType") {
 				return type.types.some((member) =>
-					resolvesToObject(member, fromNode, shadowedAliases, visited),
+					resolvesToObject(member, shadowedAliases, visited),
 				);
 			}
 			if (
@@ -94,11 +73,11 @@ export const noObjectParametersRule = defineRule({
 			) {
 				return false;
 			}
-			const alias = resolveLexicalAlias(type.typeName.name, type);
+			const alias = aliases.get(type.typeName.name);
 			if (alias === undefined) return false;
 			const nextVisited = new Set(visited);
 			nextVisited.add(type.typeName.name);
-			return resolvesToObject(alias, fromNode, shadowedAliases, nextVisited);
+			return resolvesToObject(alias, shadowedAliases, nextVisited);
 		};
 
 		const checkParameters = (node: ParameterOwner) => {
@@ -109,7 +88,7 @@ export const noObjectParametersRule = defineRule({
 			for (const parameter of node.params) {
 				const annotation = parameterAnnotation(parameter);
 				if (annotation === null || annotation === undefined) continue;
-				if (!resolvesToObject(annotation.typeAnnotation, node, shadowedAliases)) continue;
+				if (!resolvesToObject(annotation.typeAnnotation, shadowedAliases)) continue;
 				context.report({
 					node: annotation.typeAnnotation,
 					messageId: "objectParameter",
@@ -120,7 +99,7 @@ export const noObjectParametersRule = defineRule({
 
 		return {
 			Program(node) {
-				programAliases.clear();
+				aliases.clear();
 				for (const statement of node.body) {
 					const declaration =
 						statement.type === "ExportNamedDeclaration" ? statement.declaration : statement;
@@ -128,7 +107,7 @@ export const noObjectParametersRule = defineRule({
 						declaration?.type === "TSTypeAliasDeclaration" &&
 						(declaration.typeParameters === null || declaration.typeParameters === undefined)
 					) {
-						programAliases.set(declaration.id.name, declaration.typeAnnotation);
+						aliases.set(declaration.id.name, declaration.typeAnnotation);
 					}
 				}
 			},
