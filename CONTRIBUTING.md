@@ -8,7 +8,6 @@ usually stall. This page covers the mechanics.
 Node ≥ 22.12 and Git. Then:
 
 ```sh
-nvm use 22
 vp install
 vp run provision:local -- --seed
 vp run dev

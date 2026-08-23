@@ -1,17 +1,16 @@
 # Development
 
-How to build, run, and contribute to this fork of **minshop** (`zeldrisho/minshop`, forked from `ddyy/minshop`).
+How to build, run, and contribute to this fork of **minshop**.
 
 ## Prerequisites
 
-- **Node 22** (`nvm use 22`) — required toolchain is Node ≥ 22.12
+- **Node 22** — required toolchain is Node ≥ 22.12
 - **Git**, **pnpm** via `vp` (no global install needed)
 - `wrangler` is a devDependency — no global install needed
 
 ## Install
 
 ```sh
-nvm use 22
 vp install
 vp install --prefix mcp   # MCP Worker has its own package.json (or: pnpm --prefix mcp install)
 ```

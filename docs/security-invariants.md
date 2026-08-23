@@ -1,6 +1,6 @@
 # Security Invariants
 
-> Authoritative invariants live in `src/middleware.ts` / `src/features/auth/*`. This doc expands them for contributors to this fork.
+> Authoritative invariants live in `src/middleware.ts` / `src/features/auth/*`.
 
 ## Trust boundaries
 

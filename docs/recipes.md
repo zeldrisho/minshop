@@ -1,6 +1,6 @@
 # Recipes — How to Add X
 
-> Fork of [`ddyy/minshop`](https://github.com/ddyy/minshop). Patterns below are the upstream recipes, preserved verbatim so the condensed `AGENTS.md` stays under 60 lines. All paths are repo-relative.
+> All paths are repo-relative.
 
 ## A product field
 

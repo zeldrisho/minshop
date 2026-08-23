@@ -2,7 +2,7 @@
 
 ## Package Manager
 
-- Use **vp** (pnpm via `vite-plus`): `vp install` — do not use `npm`/`npx` for installs
+- Use **vp**: `vp install`
 
 ## Project Layout
 
@@ -19,16 +19,16 @@
 
 ## Commands
 
-| Task               | Command              |
-| ------------------ | -------------------- |
-| Verify (gate)      | `vp run verify`      |
-| Dev server         | `vp run dev`         |
-| Prod preview       | `vp run preview`     |
-| Unit tests         | `vp test`            |
-| D1 integration     | `vp run test:d1`     |
-| DB migrate (local) | `vp run db:migrate`  |
-| Astro diagnostics  | `vp run check`       |
-| MCP check          | `vp run mcp:check`   |
+| Task               | Command             |
+| ------------------ | ------------------- |
+| Verify (gate)      | `vp run verify`     |
+| Dev server         | `vp run dev`        |
+| Prod preview       | `vp run preview`    |
+| Unit tests         | `vp test`           |
+| D1 integration     | `vp run test:d1`    |
+| DB migrate (local) | `vp run db:migrate` |
+| Astro diagnostics  | `vp run check`      |
+| MCP check          | `vp run mcp:check`  |
 
 ## Key Conventions
 

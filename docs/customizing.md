@@ -1,7 +1,5 @@
 # Customizing your storefront
 
-> Fork note: this file was `CUSTOMIZING.md` at the repository root in upstream. This fork keeps it at `docs/customizing.md` — the root copy is removed.
-
 These files belong to your store. Upstream will not rewrite them, and you can
 change them without reading the payment, database, or caching code.
 

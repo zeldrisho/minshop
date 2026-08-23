@@ -1,6 +1,6 @@
 # Architecture
 
-> Fork of [`ddyy/minshop`](https://github.com/ddyy/minshop) — Astro 7 SSR on Cloudflare Workers + D1 + R2 + Stripe/Lightning.
+> Astro 7 SSR on Cloudflare Workers + D1 + R2 + Stripe/Lightning.
 
 ## High-level design
 
