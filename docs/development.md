@@ -60,6 +60,7 @@ Provisioning a fresh instance:
 ```sh
 git clone https://github.com/ddyy/minshop.git my-store
 cd my-store
+vp install
 vp exec wrangler login
 vp run provision:cf my-store
 # or manually: wrangler d1 create / r2 bucket create / wrangler secret put ...
