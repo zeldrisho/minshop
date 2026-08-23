@@ -71,7 +71,7 @@
     {
       "binding": "DB",
       "database_name": "minshop-db",
-      "migrations_dir": "migrations",
+      "migrations_dir": "db/migrations",
     },
   ],
   "r2_buckets": [
