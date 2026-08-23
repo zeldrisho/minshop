@@ -1,8 +1,8 @@
-import { cpSync, existsSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { basename, relative, resolve } from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { cpSync, existsSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { basename, relative, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
 
-export const TEMPLATE_REPOSITORY = 'https://github.com/ddyy/minshop.git';
+export const TEMPLATE_REPOSITORY = "https://github.com/ddyy/minshop.git";
 export const usage = `Create a new Minshop storefront.
 
 Usage:
@@ -20,7 +20,7 @@ Options:
 /** Ids upstream owns. A store may not claim one, or a later upstream release
  *  would have nowhere to put the set the name was held for. Kept in step with
  *  scripts/themes.mjs. */
-export const RESERVED_THEME_IDS = ['default', 'studio', 'market'];
+export const RESERVED_THEME_IDS = ["default", "studio", "market"];
 
 const THEME_ID = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 
@@ -29,17 +29,17 @@ const THEME_ID = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
  *  41-character id would be copied, written into theme.config.json, and
  *  only then refused by the resolver, leaving the new store unable to build. */
 function isUsableThemeId(id) {
-  return typeof id === 'string' && id.length > 0 && id.length <= 40 && THEME_ID.test(id);
+  return typeof id === "string" && id.length > 0 && id.length <= 40 && THEME_ID.test(id);
 }
 
 /** Turn a directory or store name into a usable theme id. */
 export function normalizeThemeId(name) {
-  const slug = String(name ?? '')
+  const slug = String(name ?? "")
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
     .slice(0, 40)
-    .replace(/-+$/, '');
+    .replace(/-+$/, "");
   return isUsableThemeId(slug) ? slug : null;
 }
 
@@ -67,9 +67,7 @@ export function resolveThemeId(requested, directory) {
 
   const derived = normalizeThemeId(basename(resolve(directory)));
   if (!derived) {
-    throw new Error(
-      `Cannot derive a theme id from "${directory}". Pass --theme <id> explicitly.`,
-    );
+    throw new Error(`Cannot derive a theme id from "${directory}". Pass --theme <id> explicitly.`);
   }
   // A directory literally named `minshop` is the common default, and `default`
   // is reserved, so suffix rather than fail on a name the user did not choose.
@@ -77,7 +75,7 @@ export function resolveThemeId(requested, directory) {
 }
 
 export function assertSupportedNodeVersion(version = process.versions.node) {
-  const [major, minor] = version.split('.').map(Number);
+  const [major, minor] = version.split(".").map(Number);
   if ((major === 22 && minor >= 12) || major >= 24) return;
   throw new Error(
     `Node ${version} is unsupported. Use Node 22.12 or newer on the Node 22 line, or Node 24+.`,
@@ -86,9 +84,9 @@ export function assertSupportedNodeVersion(version = process.versions.node) {
 
 export function parseArguments(args) {
   const options = {
-    directory: 'minshop',
+    directory: "minshop",
     install: true,
-    ref: 'main',
+    ref: "main",
     theme: null,
     help: false,
     version: false,
@@ -97,26 +95,26 @@ export function parseArguments(args) {
 
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
-    if (argument === '--no-install') {
+    if (argument === "--no-install") {
       options.install = false;
-    } else if (argument === '--ref') {
+    } else if (argument === "--ref") {
       const ref = args[index + 1];
-      if (!ref || ref.startsWith('-')) throw new Error('--ref requires a Git branch or tag.');
+      if (!ref || ref.startsWith("-")) throw new Error("--ref requires a Git branch or tag.");
       options.ref = ref;
       index += 1;
-    } else if (argument === '--theme') {
+    } else if (argument === "--theme") {
       const id = args[index + 1];
-      if (!id || id.startsWith('-')) throw new Error('--theme requires a theme id.');
+      if (!id || id.startsWith("-")) throw new Error("--theme requires a theme id.");
       options.theme = id;
       index += 1;
-    } else if (argument === '-h' || argument === '--help') {
+    } else if (argument === "-h" || argument === "--help") {
       options.help = true;
-    } else if (argument === '-v' || argument === '--version') {
+    } else if (argument === "-v" || argument === "--version") {
       options.version = true;
-    } else if (argument.startsWith('-')) {
+    } else if (argument.startsWith("-")) {
       throw new Error(`Unknown option: ${argument}`);
     } else if (directorySeen) {
-      throw new Error('Provide only one target directory.');
+      throw new Error("Provide only one target directory.");
     } else {
       options.directory = argument;
       directorySeen = true;
@@ -133,7 +131,7 @@ function run(command, args, cwd, stdio) {
     env: process.env,
   });
   if (result.error) {
-    if (result.error.code === 'ENOENT') {
+    if (result.error.code === "ENOENT") {
       throw new Error(`${command} is required but was not found.`);
     }
     throw result.error;
@@ -148,25 +146,25 @@ function shellPath(path) {
 }
 
 export function scaffoldMinshop({
-  directory = 'minshop',
+  directory = "minshop",
   install = true,
-  ref = 'main',
+  ref = "main",
   theme = null,
   cwd = process.cwd(),
   repository = TEMPLATE_REPOSITORY,
-  stdio = 'inherit',
+  stdio = "inherit",
 } = {}) {
   assertSupportedNodeVersion();
   const target = resolve(cwd, directory);
   if (target === resolve(cwd)) {
-    throw new Error('Choose a new directory instead of the current directory.');
+    throw new Error("Choose a new directory instead of the current directory.");
   }
   if (existsSync(target)) {
     throw new Error(`Target already exists: ${target}`);
   }
 
   try {
-    run('git', ['clone', '--depth', '1', '--branch', ref, repository, target], cwd, stdio);
+    run("git", ["clone", "--depth", "1", "--branch", ref, repository, target], cwd, stdio);
   } catch (error) {
     rmSync(target, { recursive: true, force: true });
     throw error;
@@ -174,9 +172,9 @@ export function scaffoldMinshop({
 
   // A generated storefront should not inherit the template repository history or
   // package-maintainer release machinery.
-  rmSync(resolve(target, '.git'), { recursive: true, force: true });
-  rmSync(resolve(target, 'create-minshop'), { recursive: true, force: true });
-  rmSync(resolve(target, '.github/workflows/publish-create-minshop.yml'), {
+  rmSync(resolve(target, ".git"), { recursive: true, force: true });
+  rmSync(resolve(target, "create-minshop"), { recursive: true, force: true });
+  rmSync(resolve(target, ".github/workflows/publish-create-minshop.yml"), {
     force: true,
   });
   // This store's own theme. Copied from the upstream default and
@@ -184,26 +182,23 @@ export function scaffoldMinshop({
   // change its design — the boundary that keeps future upstream changes from
   // colliding with a merchant's work.
   const themeId = resolveThemeId(theme, target);
-  const themesDir = resolve(target, 'src/themes');
+  const themesDir = resolve(target, "src/themes");
   if (existsSync(resolve(themesDir, themeId))) {
-    throw new Error(`Theme "${themeId}" already exists in the upstream repository. Pass --theme <id>.`);
+    throw new Error(
+      `Theme "${themeId}" already exists in the upstream repository. Pass --theme <id>.`,
+    );
   }
-  cpSync(resolve(themesDir, 'default'), resolve(themesDir, themeId), { recursive: true });
+  cpSync(resolve(themesDir, "default"), resolve(themesDir, themeId), { recursive: true });
   writeFileSync(
-    resolve(target, 'theme.config.json'),
+    resolve(target, "theme.config.json"),
     `${JSON.stringify({ theme: themeId }, null, 2)}\n`,
   );
 
-  run('git', ['init'], target, stdio);
+  run("git", ["init"], target, stdio);
 
   if (install) {
-    run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['ci'], target, stdio);
-    run(
-      process.platform === 'win32' ? 'npm.cmd' : 'npm',
-      ['ci', '--prefix', 'mcp'],
-      target,
-      stdio,
-    );
+    run(process.platform === "win32" ? "npm.cmd" : "npm", ["ci"], target, stdio);
+    run(process.platform === "win32" ? "npm.cmd" : "npm", ["ci", "--prefix", "mcp"], target, stdio);
   }
 
   const relativeTarget = relative(cwd, target) || basename(target);
