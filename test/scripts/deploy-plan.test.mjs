@@ -183,8 +183,8 @@ describe("deploy.mjs stays on the executor", () => {
     const opsStart = source.indexOf("const ops = {");
     expect(opsStart).toBeGreaterThan(-1);
     const opsBlock = source.slice(opsStart, source.indexOf("executeDeployPlan(", opsStart));
-    const wranglerCalls = source.match(/'wrangler'/g) ?? [];
-    const inOps = opsBlock.match(/'wrangler'/g) ?? [];
+    const wranglerCalls = source.match(/["']wrangler["']/g) ?? [];
+    const inOps = opsBlock.match(/["']wrangler["']/g) ?? [];
     expect(wranglerCalls.length).toBeGreaterThan(0);
     expect(wranglerCalls.length).toBe(inOps.length);
   });
@@ -236,6 +236,6 @@ describe("private deliverable provisioning", () => {
     expect(destroy).toContain("recorded_files_bucket=");
     expect(destroy).toContain('if [[ "$files_bucket_deleted" == "1" ]]');
     expect(destroy).toContain("RESIDUAL_RESOURCE=private-files");
-    expect(destroy).toContain("CLEANUP_COMMAND=npx wrangler r2 bucket delete $FILES_BUCKET");
+    expect(destroy).toContain("CLEANUP_COMMAND=vp exec wrangler r2 bucket delete $FILES_BUCKET");
   });
 });

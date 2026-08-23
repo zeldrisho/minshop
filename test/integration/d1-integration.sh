@@ -17,13 +17,13 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-npx wrangler d1 migrations apply DB --local --persist-to "$state_dir" >/dev/null
-npx wrangler d1 execute DB --local --persist-to "$state_dir" --file ./seed.sql >/dev/null
-npx wrangler d1 execute DB --local --persist-to "$state_dir" \
+vp exec wrangler d1 migrations apply DB --local --persist-to "$state_dir" >/dev/null
+vp exec wrangler d1 execute DB --local --persist-to "$state_dir" --file ./seed.sql >/dev/null
+vp exec wrangler d1 execute DB --local --persist-to "$state_dir" \
   --command "INSERT INTO settings (key, value) VALUES ('setup_complete', '1');" >/dev/null
-npx wrangler d1 execute DB --local --persist-to "$state_dir" \
+vp exec wrangler d1 execute DB --local --persist-to "$state_dir" \
   --command "WITH RECURSIVE seq(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM seq WHERE n < 30) INSERT INTO products (name, slug, description, price_cents, stock) SELECT 'Pagination Item ' || n, 'pagination-item-' || n, 'pagination fixture', 1000 + n, 10 FROM seq;" >/dev/null
-npx wrangler d1 execute DB --local --persist-to "$state_dir" \
+vp exec wrangler d1 execute DB --local --persist-to "$state_dir" \
   --command "INSERT INTO categories (name, slug) VALUES ('Apparel', 'apparel'); INSERT INTO product_categories (product_id, category_id) SELECT p.id, c.id FROM products p, categories c WHERE p.slug = 'sample-tee' AND c.slug = 'apparel';" >/dev/null
 image_bucket="$(node -e '
   const config = require("node:fs").readFileSync("wrangler.jsonc", "utf8");
@@ -37,20 +37,20 @@ files_bucket="$(node -e '
   if (!match) throw new Error("FILES binding is missing a bucket_name");
   process.stdout.write(match[1]);
 ')"
-npx wrangler r2 object put "$image_bucket/media/cache-header-fixture.svg" \
+vp exec wrangler r2 object put "$image_bucket/media/cache-header-fixture.svg" \
   --local --persist-to "$state_dir" --file public/favicon.svg \
   --content-type image/svg+xml >/dev/null
-npx wrangler r2 object put "$files_bucket/deliverables/integration/guide.txt" \
+vp exec wrangler r2 object put "$files_bucket/deliverables/integration/guide.txt" \
   --local --persist-to "$state_dir" --file README.md \
   --content-type text/plain --cache-control 'private, no-store' >/dev/null
-npx wrangler d1 execute DB --local --persist-to "$state_dir" \
+vp exec wrangler d1 execute DB --local --persist-to "$state_dir" \
   --command "UPDATE products SET file_key = 'deliverables/integration/guide.txt', file_name = 'integration-guide.txt', file_mime = 'text/plain', file_size_bytes = 1 WHERE slug = 'sample-tee';" >/dev/null
 # Fixture rows need valid public_ids (hex ⊂ the Crockford alphabet) — the
 # public serializers refuse rows without one.
-npx wrangler d1 execute DB --local --persist-to "$state_dir" \
+vp exec wrangler d1 execute DB --local --persist-to "$state_dir" \
   --command "UPDATE products SET public_id = 'prod_' || lower(substr(hex(randomblob(10)),1,10)) WHERE public_id IS NULL; UPDATE categories SET public_id = 'cat_' || lower(substr(hex(randomblob(10)),1,10)) WHERE public_id IS NULL;" >/dev/null
 
-index_rows="$(npx wrangler d1 execute DB --local --persist-to "$state_dir" \
+index_rows="$(vp exec wrangler d1 execute DB --local --persist-to "$state_dir" \
   --command "SELECT name FROM sqlite_master WHERE type = 'index' AND name IN ('idx_orders_created', 'idx_orders_email_created', 'idx_products_active_created') ORDER BY name;")"
 for index_name in idx_orders_created idx_orders_email_created idx_products_active_created; do
   if [[ "$index_rows" != *"$index_name"* ]]; then
@@ -65,7 +65,7 @@ done
 # services to the dev proxy; with it on, the proxy intermittently answered a
 # request with its own bare 500 without ever invoking the Worker.
 export X_LOCAL_OBSERVABILITY=false
-npx wrangler dev \
+vp exec wrangler dev \
   --config dist/server/wrangler.json \
   --persist-to "$state_dir" \
   --var CANONICAL_ORIGIN:https://canonical.example \
@@ -144,7 +144,7 @@ sample_id="$(node -e '
 
 # The media library must exist and already contain every product image key, so
 # existing uploads are manageable without moving a single R2 object.
-media_rows="$(npx wrangler d1 execute DB --local --persist-to "$state_dir" \
+media_rows="$(vp exec wrangler d1 execute DB --local --persist-to "$state_dir" \
   --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('media','pages','page_media') ORDER BY name;")"
 for table in media page_media pages; do
   if [[ "$media_rows" != *"$table"* ]]; then
@@ -153,7 +153,7 @@ for table in media page_media pages; do
   fi
 done
 
-backfill="$(npx wrangler d1 execute DB --local --persist-to "$state_dir" \
+backfill="$(vp exec wrangler d1 execute DB --local --persist-to "$state_dir" \
   --command "SELECT COUNT(*) AS missing FROM (SELECT image_key FROM product_images UNION SELECT image_key FROM products WHERE image_key IS NOT NULL AND image_key != '') refs LEFT JOIN media m ON m.image_key = refs.image_key WHERE m.id IS NULL;")"
 if [[ "$backfill" != *"0"* ]]; then
   echo "D1 integration failed: product image keys missing from media" >&2
@@ -185,13 +185,13 @@ done
 
 # Merchant-authored pages: published ones are public and discoverable, drafts are
 # neither. Seeded directly because the integration harness has no admin session.
-npx wrangler d1 execute DB --local --persist-to "$state_dir" \
+vp exec wrangler d1 execute DB --local --persist-to "$state_dir" \
   --command "INSERT INTO pages (title, slug, body_markdown, published) VALUES ('Shipping Info', 'shipping', '## Shipping\n\nWe ship worldwide.', 1), ('Secret Draft', 'secret-draft', 'Not ready.', 0);" >/dev/null
 
 # Navigation is explicit now: publishing a page no longer puts it in the footer
 # by itself. The migration's seed only backfills pages that existed when it ran,
 # and these were created after it, so link them the way a merchant would.
-npx wrangler d1 execute DB --local --persist-to "$state_dir" \
+vp exec wrangler d1 execute DB --local --persist-to "$state_dir" \
   --command "INSERT INTO menu_items (location, target_type, target_id, position) SELECT 'footer', 'page', id, 0 FROM pages WHERE slug = 'shipping';" >/dev/null
 
 page_status="$(curl --max-time 30 --silent --output /dev/null --write-out '%{http_code}' \
@@ -375,7 +375,7 @@ fi
 # The footer renders what the merchant put in the menu, and hides a menu item
 # whose target stops being published — the draft below is deliberately linked to
 # prove the storefront drops it rather than rendering a dead link.
-npx wrangler d1 execute DB --local --persist-to "$state_dir" \
+vp exec wrangler d1 execute DB --local --persist-to "$state_dir" \
   --command "INSERT INTO menu_items (location, target_type, target_id, position) SELECT 'footer', 'page', id, 1 FROM pages WHERE slug = 'secret-draft';" >/dev/null
 
 home="$(curl --max-time 30 --fail --silent --show-error "http://127.0.0.1:$test_port/")"
@@ -467,7 +467,7 @@ fi
 # stock reservation + pending payment, settlement atomically writes the paid
 # order + items without decrementing twice, and the confirmation page reads that
 # committed state back.
-stock_before_demo="$(npx wrangler d1 execute DB --local --persist-to "$state_dir" --json \
+stock_before_demo="$(vp exec wrangler d1 execute DB --local --persist-to "$state_dir" --json \
   --command "SELECT stock FROM products WHERE slug = 'sample-tee';" |
   node -e 'let s=""; process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(String(JSON.parse(s)[0].results[0].stock)))')"
 checkout="$(curl --max-time 30 --fail --silent --show-error \
@@ -483,7 +483,7 @@ confirming_item_id="$(node -e '
   if (!b.items?.[0]?.item_public_id?.startsWith("itm_")) throw new Error("confirming item has no itm_ identity");
   process.stdout.write(b.items[0].item_public_id);
 ' "$confirming")"
-stock_after_demo_hold="$(npx wrangler d1 execute DB --local --persist-to "$state_dir" --json \
+stock_after_demo_hold="$(vp exec wrangler d1 execute DB --local --persist-to "$state_dir" --json \
   --command "SELECT stock FROM products WHERE slug = 'sample-tee';" |
   node -e 'let s=""; process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(String(JSON.parse(s)[0].results[0].stock)))')"
 if [[ "$stock_after_demo_hold" -ne $((stock_before_demo - 1)) ]]; then
@@ -498,7 +498,7 @@ fi
 # it against zone 1 before ship_to was even read — while a US order still fails
 # with the real missing_weight reason.
 two_zone_config='{"schema":2,"revision":1,"enabled":true,"packageWeightGrams":0,"zones":[{"name":"United States","countries":["US"],"rates":[{"label":"By weight","pricing":{"type":"weight","bands":[{"upToGrams":1000,"amountCents":500}]}}],"freeOverCents":null},{"name":"Rest of world","countries":["*"],"rates":[{"label":"International","pricing":{"type":"flat","amountCents":3000}}],"freeOverCents":null}]}'
-npx wrangler d1 execute DB --local --persist-to "$state_dir" \
+vp exec wrangler d1 execute DB --local --persist-to "$state_dir" \
   --command "INSERT INTO settings (key, value) VALUES ('shipping_config', '$two_zone_config')" >/dev/null
 
 ca_body="$state_dir/ca-checkout.json"
@@ -532,7 +532,7 @@ node -e '
   }
 ' "$us_body"
 
-npx wrangler d1 execute DB --local --persist-to "$state_dir" \
+vp exec wrangler d1 execute DB --local --persist-to "$state_dir" \
   --command "DELETE FROM settings WHERE key = 'shipping_config'" >/dev/null
 
 # A shipped in-app order without a destination must be refused, not quietly
@@ -563,7 +563,7 @@ if [[ "$originless_status" != "200" ]] || ! grep -q 'Payment declined' "$originl
   exit 1
 fi
 
-stock_before_demo_settle="$(npx wrangler d1 execute DB --local --persist-to "$state_dir" --json \
+stock_before_demo_settle="$(vp exec wrangler d1 execute DB --local --persist-to "$state_dir" --json \
   --command "SELECT stock FROM products WHERE slug = 'sample-tee';" |
   node -e 'let s=""; process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(String(JSON.parse(s)[0].results[0].stock)))')"
 settle_status="$(curl --max-time 30 --silent --output /dev/null --write-out '%{http_code}' \
@@ -575,14 +575,14 @@ if [[ "$settle_status" != "303" ]]; then
   echo "D1 integration failed: demo settlement returned HTTP $settle_status" >&2
   exit 1
 fi
-stock_after_demo_settle="$(npx wrangler d1 execute DB --local --persist-to "$state_dir" --json \
+stock_after_demo_settle="$(vp exec wrangler d1 execute DB --local --persist-to "$state_dir" --json \
   --command "SELECT stock FROM products WHERE slug = 'sample-tee';" |
   node -e 'let s=""; process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(String(JSON.parse(s)[0].results[0].stock)))')"
 if [[ "$stock_after_demo_settle" -ne "$stock_before_demo_settle" ]]; then
   echo "D1 integration failed: demo settlement decremented reserved stock twice" >&2
   exit 1
 fi
-reservation_status="$(npx wrangler d1 execute DB --local --persist-to "$state_dir" --json \
+reservation_status="$(vp exec wrangler d1 execute DB --local --persist-to "$state_dir" --json \
   --command "SELECT status FROM checkout_reservations WHERE public_id = '$order_id';" |
   node -e 'let s=""; process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(String(JSON.parse(s)[0].results[0].status)))')"
 if [[ "$reservation_status" != "settled" ]]; then
@@ -611,7 +611,7 @@ if ! tr -d '\r' <"$download_headers" | grep -qi '^content-disposition: attachmen
   echo "D1 integration failed: download did not use its snapshotted filename" >&2
   exit 1
 fi
-download_count="$(npx wrangler d1 execute DB --local --persist-to "$state_dir" --json \
+download_count="$(vp exec wrangler d1 execute DB --local --persist-to "$state_dir" --json \
   --command "SELECT downloads FROM order_items WHERE public_id = '$confirming_item_id';" |
   node -e 'let s=""; process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(String(JSON.parse(s)[0].results[0].downloads)))')"
 if [[ "$download_count" != "1" ]]; then

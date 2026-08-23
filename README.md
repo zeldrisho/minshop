@@ -1,8 +1,6 @@
 # minshop
 
 [![Verify](https://github.com/ddyy/minshop/actions/workflows/verify.yml/badge.svg)](https://github.com/ddyy/minshop/actions/workflows/verify.yml)
-[![npm](https://img.shields.io/npm/v/create-minshop?label=create-minshop)](https://www.npmjs.com/package/create-minshop)
-[![npm downloads](https://img.shields.io/npm/dm/create-minshop)](https://www.npmjs.com/package/create-minshop)
 [![License: MIT](https://img.shields.io/github/license/ddyy/minshop)](LICENSE)
 
 <p><em>Community fork — see <code>docs/</code> for development, architecture, security, and API docs.</em></p>
@@ -20,14 +18,12 @@ Small, server-rendered store for Cloudflare Workers (D1 + R2) with a full admin,
 > Requires Node ≥ 22.12 and Git.
 
 ```sh
-npm create minshop@latest my-store
+git clone https://github.com/ddyy/minshop.git my-store
 cd my-store
 vp install
 vp run provision:local -- --seed
 vp run dev  # http://localhost:4321 → /admin is the setup wizard
 ```
-
-`--no-install` scaffolds without installing; `--ref <branch|tag>` pins a revision.
 
 ## Features
 
@@ -73,7 +69,7 @@ Stripe locally: paste `sk_test_…` in Admin → Settings → Payments, then `st
 **CLI:**
 
 ```sh
-npx wrangler login
+vp exec wrangler login
 vp run provision:cf my-store   # or: d1 create + r2 bucket create + wrangler secret put
 vp run deploy                  # migrate + build + deploy + purge
 ```

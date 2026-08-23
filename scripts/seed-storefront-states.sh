@@ -22,7 +22,7 @@ set -euo pipefail
 # the settings it owns before applying its own.
 
 scenario="${1:-default}"
-d1() { npx wrangler d1 execute DB --local --command "$1" >/dev/null; }
+d1() { vp exec wrangler d1 execute DB --local --command "$1" >/dev/null; }
 
 case "$scenario" in
   default|cart-off|buy-now-off|no-payment) ;;
@@ -34,13 +34,13 @@ case "$scenario" in
 esac
 
 echo "Applying migrations…"
-npx wrangler d1 migrations apply DB --local >/dev/null
+vp exec wrangler d1 migrations apply DB --local >/dev/null
 
 echo "Seeding base catalog…"
-npx wrangler d1 execute DB --local --file ./seed.sql >/dev/null
+vp exec wrangler d1 execute DB --local --file ./seed.sql >/dev/null
 
 echo "Seeding storefront states…"
-npx wrangler d1 execute DB --local --file ./test/fixtures/storefront-states.sql >/dev/null
+vp exec wrangler d1 execute DB --local --file ./test/fixtures/storefront-states.sql >/dev/null
 
 # Gallery rows point at object keys. Without matching objects the page renders
 # with broken images, which makes the gallery unusable for exactly the visual
@@ -53,7 +53,7 @@ bucket="$(node -e '
   process.stdout.write(match[1]);
 ')"
 for key in media/tee-front.jpg media/tee-back.jpg; do
-  npx wrangler r2 object put "$bucket/$key" --local \
+  vp exec wrangler r2 object put "$bucket/$key" --local \
     --file public/placeholder.png --content-type image/png >/dev/null
 done
 
@@ -70,7 +70,7 @@ esac
 
 cat <<'ROUTES'
 
-Seeded. Routes worth looking at (npm run dev):
+Seeded. Routes worth looking at (vp run dev):
 
   /                                catalog, first card is the LCP image
   /products?sort=price&dir=asc     sort links

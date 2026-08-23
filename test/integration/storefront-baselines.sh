@@ -5,11 +5,11 @@ set -euo pipefail
 # isolated, deterministically seeded D1 so rendered HTML can be compared before
 # and after a component extraction.
 #
-# This is not part of `npm run verify`: a store that has customized its
+# This is not part of `vp run verify`: a store that has customized its
 # templates is SUPPOSED to differ from the default baselines. Run it while
 # extracting a default component, or when deliberately updating the default
 # design. The checks that must pass for every design live in
-# `npm run test:storefront-contract`.
+# `vp run test:storefront-contract`.
 #
 # Pass --update to re-capture. Review that diff like source.
 
@@ -28,19 +28,19 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 if [[ ! -f dist/server/wrangler.json ]]; then
-  echo "storefront baselines: run 'npm run build' first" >&2
+  echo "storefront baselines: run 'vp run build' first" >&2
   exit 1
 fi
 
-npx wrangler d1 migrations apply DB --local --persist-to "$state_dir" >/dev/null
-npx wrangler d1 execute DB --local --persist-to "$state_dir" --file ./seed.sql >/dev/null
+vp exec wrangler d1 migrations apply DB --local --persist-to "$state_dir" >/dev/null
+vp exec wrangler d1 execute DB --local --persist-to "$state_dir" --file ./seed.sql >/dev/null
 # Every product and page shape comes from the shared fixture, so the states this
-# gate protects are the same ones `npm run db:seed:storefront-states` makes
+# gate protects are the same ones `vp run db:seed:storefront-states` makes
 # browsable. A shape that exists only here could never be looked at.
-npx wrangler d1 execute DB --local --persist-to "$state_dir" \
+vp exec wrangler d1 execute DB --local --persist-to "$state_dir" \
   --file ./test/fixtures/storefront-states.sql >/dev/null
 
-npx wrangler dev \
+vp exec wrangler dev \
   --config dist/server/wrangler.json \
   --persist-to "$state_dir" \
   --var CANONICAL_ORIGIN:https://canonical.example \

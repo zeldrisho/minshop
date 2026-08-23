@@ -28,11 +28,8 @@ jobs:
           node-version: 22
           cache: true
 
-      - name: Install storefront dependencies
+      - name: Install dependencies (storefront + mcp workspace)
         run: vp install
-
-      - name: Install MCP dependencies
-        run: npm ci --prefix mcp
 
       - name: Create isolated Wrangler configuration
         run: |
@@ -103,7 +100,7 @@ jobs:
           node-version: 22
           cache: true
 
-      - name: Install storefront dependencies
+      - name: Install dependencies (storefront + mcp workspace)
         run: vp install
 
       - name: Create isolated Wrangler configuration
