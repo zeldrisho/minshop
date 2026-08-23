@@ -23,7 +23,7 @@ import { resolveHomePath, homeTargetIsValid } from "../../src/features/settings/
 // usage agrees with the delete guard about what "in use" means.
 //
 // Schema is hand-rolled to the production shape, matching test-refunds.mjs and
-// test-reservations.mjs. test/integration/d1-integration.sh remains the sole
+// tests/integration/reservations.mjs. tests/integration/d1-integration.sh remains the sole
 // full-migration gate, so schema drift is caught in exactly one place.
 
 const mf = new Miniflare({

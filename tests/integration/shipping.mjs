@@ -32,7 +32,7 @@ import { fulfillOrder } from "../../src/features/orders/db.ts";
 // meanwhile, and that the missing-weight count reflects real variant inheritance.
 //
 // Schema is hand-rolled to the production shape, matching test-menus.mjs.
-// test/integration/d1-integration.sh remains the sole full-migration gate.
+// tests/integration/d1-integration.sh remains the sole full-migration gate.
 
 const mf = new Miniflare({
   modules: true,

@@ -6,13 +6,13 @@
  * verify chain — a customized storefront is expected to fail it. See
  * vp run test:storefront-contract for the checks that survive a redesign.
  *
- * Usage: node test/helpers/baselines.mjs <port> [--update]
+ * Usage: node tests/helpers/baselines.mjs <port> [--update]
  */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { normalizeHeaders, normalizeHtml } from "./normalize-html.mjs";
 
-const BASELINE_DIR = "test/baselines/storefront";
+const BASELINE_DIR = "tests/baselines/storefront";
 
 /** Node's fetch waits forever by default. A wedged Worker should fail this
  *  script in seconds, not hang whatever is running it. */

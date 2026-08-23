@@ -31,8 +31,8 @@ export default getViteConfig(
       environment: "node",
       include: [
         "src/**/*.test.ts",
-        "test/storefront/**/*.test.{ts,mjs}",
-        "test/scripts/**/*.test.mjs",
+        "tests/storefront/**/*.test.{ts,mjs}",
+        "tests/scripts/**/*.test.mjs",
       ],
       alias: {
         "#theme": theme.dir,
@@ -42,7 +42,7 @@ export default getViteConfig(
         // Lets pure-function modules that merely read deployment vars at import
         // time (config.ts, and the email templates through it) be unit-tested.
         // Real bindings stay out of scope — see the stub's own note.
-        "cloudflare:workers": new URL("./test/helpers/cloudflare-workers-stub.ts", import.meta.url)
+        "cloudflare:workers": new URL("./tests/helpers/cloudflare-workers-stub.ts", import.meta.url)
           .pathname,
       },
     },

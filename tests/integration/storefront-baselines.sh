@@ -38,7 +38,7 @@ vp exec wrangler d1 execute DB --local --persist-to "$state_dir" --file ./seed.s
 # gate protects are the same ones `vp run db:seed:storefront-states` makes
 # browsable. A shape that exists only here could never be looked at.
 vp exec wrangler d1 execute DB --local --persist-to "$state_dir" \
-  --file ./test/fixtures/storefront-states.sql >/dev/null
+  --file ./tests/fixtures/storefront-states.sql >/dev/null
 
 vp exec wrangler dev \
   --config dist/server/wrangler.json \
@@ -74,4 +74,4 @@ if [[ -z "$ready" ]]; then
   exit 1
 fi
 
-node test/helpers/baselines.mjs "$test_port" "$@"
+node tests/helpers/baselines.mjs "$test_port" "$@"

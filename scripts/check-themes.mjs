@@ -49,7 +49,7 @@ const MODELS_MODULE = "src/features/storefront/models.ts";
 function defaultPaths() {
   return [
     ...discoverThemeIds().map((id) => `${THEMES_DIR}/${id}`),
-    "test/storefront/fixtures",
+    "tests/storefront/fixtures",
     CONTROLS_DIR,
   ];
 }

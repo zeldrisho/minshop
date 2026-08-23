@@ -40,7 +40,7 @@ echo "Seeding base catalog…"
 vp exec wrangler d1 execute DB --local --file ./seed.sql >/dev/null
 
 echo "Seeding storefront states…"
-vp exec wrangler d1 execute DB --local --file ./test/fixtures/storefront-states.sql >/dev/null
+vp exec wrangler d1 execute DB --local --file ./tests/fixtures/storefront-states.sql >/dev/null
 
 # Gallery rows point at object keys. Without matching objects the page renders
 # with broken images, which makes the gallery unusable for exactly the visual
