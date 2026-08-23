@@ -15,7 +15,7 @@ vp test              # vitest run (pure logic)
 vp test --watch      # watch mode (or: vp run test:watch)
 ```
 
-- **70 test files**, organized as colocated `foo.ts` + `foo.test.ts` throughout the codebase, plus centralized directories including `test/storefront`, `test/integration`, and `create-minshop/test`.
+- **70 test files**, organized as colocated `foo.ts` + `foo.test.ts` throughout the codebase, plus centralized directories including `tests/storefront`, `tests/integration`, `tests/scripts`, `tests/helpers`, and `tests/fixtures`.
 - Renders `.astro` components via `AstroContainer` + contract/baseline checks.
 - Covers: `slugify`, FTS search sanitizer + edit-distance, `parseProductForm`, image validation, cart counting, reservation aggregation, order-number scheme, Access JWT verifier, pagination clamping, `orderByClause` sort whitelisting (SQL-injection boundary).
 - **Rule:** `*.test.ts` must NOT import `cloudflare:workers` (vitest can't load it). Keep DB/env logic out of unit-tested modules — pass `db`/secrets as params (see `lightning/rate.ts`, `auth/session.ts`).
