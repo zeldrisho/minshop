@@ -1,6 +1,6 @@
-import type { D1Database } from '@cloudflare/workers-types';
-import { getSetting, setSetting } from '../settings/db';
-import { hashPassword, verifyPassword } from './password';
+import type { D1Database } from "@cloudflare/workers-types";
+import { getSetting, setSetting } from "../settings/db";
+import { hashPassword, verifyPassword } from "./password";
 
 /**
  * The admin login credential: a PBKDF2 hash in D1 (`admin_password_hash`), set
@@ -10,7 +10,7 @@ import { hashPassword, verifyPassword } from './password';
  * protection. Kept out of the general settings overlay (never in `locals.settings`)
  * — read only here, on protected requests.
  */
-const HASH_KEY = 'admin_password_hash';
+const HASH_KEY = "admin_password_hash";
 
 /** Store the admin password as a PBKDF2 hash in D1 (empty clears it → bootstrap). */
 export async function setAdminPassword(db: D1Database, password: string): Promise<void> {
@@ -36,5 +36,5 @@ export async function adminCredential(db: D1Database): Promise<AdminCredential> 
   if (hash) {
     return { enabled: true, tagSource: hash, verify: (t) => verifyPassword(t, hash) };
   }
-  return { enabled: false, tagSource: '', verify: async () => false };
+  return { enabled: false, tagSource: "", verify: async () => false };
 }

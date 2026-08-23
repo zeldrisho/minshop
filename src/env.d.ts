@@ -3,7 +3,7 @@
 // Raw .sql imports (Vite `?raw`) — used to run seed files at runtime (see
 // src/features/seed/demo.ts). `types` in tsconfig.json overrides the default
 // lib set, so declare it explicitly rather than relying on vite/client.
-declare module '*.sql?raw' {
+declare module "*.sql?raw" {
   const content: string;
   export default content;
 }
@@ -29,29 +29,29 @@ interface ImagesBindingMin {
 // Set by src/middleware.ts after verifying a Cloudflare Access JWT (Layer 2).
 // Extends the adapter Runtime so `locals.cfContext` (the ExecutionContext) is
 // typed — used for ctx.waitUntil edge-caching in src/pages/images/[...key].ts.
-type CloudflareRuntime = import('@astrojs/cloudflare').Runtime;
+type CloudflareRuntime = import("@astrojs/cloudflare").Runtime;
 declare namespace App {
   interface Locals extends CloudflareRuntime {
     adminEmail?: string;
     /** Runtime settings overlay (store name etc.), loaded once per request. */
-    settings?: import('./features/settings/db').StoreSettings;
+    settings?: import("./features/settings/db").StoreSettings;
     /** Resolved header/footer navigation, batched with settings so uncached
      *  routes (/cart, /checkout, /account) pay no extra round trip. */
-    menus?: import('./features/navigation/db').Menus;
+    menus?: import("./features/navigation/db").Menus;
   }
 }
 
 declare namespace Cloudflare {
   interface Env {
-    DB: import('@cloudflare/workers-types').D1Database;
-    BUCKET: import('@cloudflare/workers-types').R2Bucket;
-    FILES: import('@cloudflare/workers-types').R2Bucket;
+    DB: import("@cloudflare/workers-types").D1Database;
+    BUCKET: import("@cloudflare/workers-types").R2Bucket;
+    FILES: import("@cloudflare/workers-types").R2Bucket;
     // Native edge counters for anonymous credential and paid-provider abuse.
     // Optional in the type so an older custom config fails open during upgrade;
     // the provisioning template and active project config declare them.
-    AUTH_RATE_LIMITER?: import('@cloudflare/workers-types').RateLimit;
-    CHECKOUT_RATE_LIMITER?: import('@cloudflare/workers-types').RateLimit;
-    SEARCH_RATE_LIMITER?: import('@cloudflare/workers-types').RateLimit;
+    AUTH_RATE_LIMITER?: import("@cloudflare/workers-types").RateLimit;
+    CHECKOUT_RATE_LIMITER?: import("@cloudflare/workers-types").RateLimit;
+    SEARCH_RATE_LIMITER?: import("@cloudflare/workers-types").RateLimit;
     // Optional: Cloudflare Images binding for upload optimization (needs
     // Transformations enabled). Absent = uploads stored as-is (imageOptimize.ts
     // guards + falls back), so the free-plan default config omits it.
@@ -59,8 +59,8 @@ declare namespace Cloudflare {
     // Semantic search (config.search.provider='vector'). Present only when bound:
     // AI = Workers AI (embeddings); VECTORIZE = the Vectorize index. Both optional
     // so the default FTS path needs neither.
-    AI?: import('@cloudflare/workers-types').Ai;
-    VECTORIZE?: import('@cloudflare/workers-types').VectorizeIndex;
+    AI?: import("@cloudflare/workers-types").Ai;
+    VECTORIZE?: import("@cloudflare/workers-types").VectorizeIndex;
     // Search backend selector (overrides config.search.provider): 'fts' | 'vector'.
     SEARCH_PROVIDER?: string;
     STORE_NAME: string;
@@ -113,6 +113,6 @@ declare namespace Cloudflare {
     // onboarded (Workers paid plan). Optional so getEmailProvider() can no-op.
     // (The Resend API key is NOT an env var — it's set in the admin dashboard and
     // stored in the encrypted D1 vault. See features/secrets/store.ts.)
-    EMAIL?: import('./features/email/cloudflare').EmailBinding;
+    EMAIL?: import("./features/email/cloudflare").EmailBinding;
   }
 }
