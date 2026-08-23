@@ -20,7 +20,7 @@ import { readdirSync, readFileSync } from "node:fs";
  * `SELECT CASE WHEN EXISTS (…) THEN RAISE(ABORT, '…') END;`.
  */
 
-const MIGRATIONS = new URL("../../migrations/", import.meta.url);
+const MIGRATIONS = new URL("../../db/migrations/", import.meta.url);
 
 describe("migrations survive wrangler --remote", () => {
   const files = readdirSync(MIGRATIONS).filter((name) => name.endsWith(".sql"));

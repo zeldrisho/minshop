@@ -37,7 +37,7 @@ echo "Applying migrations…"
 vp exec wrangler d1 migrations apply DB --local >/dev/null
 
 echo "Seeding base catalog…"
-vp exec wrangler d1 execute DB --local --file ./seed.sql >/dev/null
+vp exec wrangler d1 execute DB --local --file ./db/seeds/seed.sql >/dev/null
 
 echo "Seeding storefront states…"
 vp exec wrangler d1 execute DB --local --file ./tests/fixtures/storefront-states.sql >/dev/null

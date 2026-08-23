@@ -10,7 +10,7 @@
 #
 #   Usage:  scripts/reset.sh [--remote] [--seed] [--yes]
 #   --remote: target the DEPLOYED D1 (default: the local .wrangler/state store).
-#   --seed:   load ./seed.sql after clearing.
+#   --seed:   load ./db/seeds/seed.sql after clearing.
 #   --yes:    skip the confirmation prompt.
 #
 # ⚠  IRREVERSIBLE — deletes ALL products, orders, and settings in the target store.
@@ -66,8 +66,8 @@ CI=1 $W d1 execute DB $TARGET --command "$RESET_SQL"
 CI=1 $W d1 execute DB $TARGET --command "INSERT INTO products_fts(products_fts) VALUES('rebuild');" >/dev/null 2>&1 || true
 
 if [[ "$SEED" == "1" ]]; then
-  [[ -f seed.sql ]] && CI=1 $W d1 execute DB $TARGET --file=./seed.sql \
-    || echo "  (--seed given but ./seed.sql not found — skipped)"
+  [[ -f db/seeds/seed.sql ]] && CI=1 $W d1 execute DB $TARGET --file=./db/seeds/seed.sql \
+    || echo "  (--seed given but ./db/seeds/seed.sql not found — skipped)"
 fi
 
 echo "✓ $WHERE store reset to a fresh install. Open /admin/setup to configure it again."

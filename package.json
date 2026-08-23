@@ -21,7 +21,7 @@
     "verify:theme": "node scripts/verify-theme.mjs",
     "db:migrate": "wrangler d1 migrations apply DB --local",
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
-    "db:seed": "wrangler d1 execute DB --local --file=./seed.sql",
+    "db:seed": "wrangler d1 execute DB --local --file=./db/seeds/seed.sql",
     "provision:cf": "bash scripts/provision-cf.sh",
     "provision:local": "bash scripts/provision-local.sh",
     "destroy:cf": "bash scripts/destroy-cf.sh",

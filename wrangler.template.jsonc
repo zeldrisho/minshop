@@ -54,7 +54,7 @@
       "binding": "DB",
       "database_name": "__DB_NAME__",
       "database_id": "__DB_ID__",
-      "migrations_dir": "migrations",
+      "migrations_dir": "db/migrations",
     },
   ],
   "r2_buckets": [
