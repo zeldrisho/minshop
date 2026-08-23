@@ -130,7 +130,7 @@ async function purgeAfterDeploy(origin, secret) {
 
 // The real operations, and NOTHING outside them. Which step invokes which
 // operation is decided by executeDeployPlan — the shared, spy-testable
-// mapping in deploy-plan.mjs — so test/scripts/deploy-plan.test.mjs proves a
+// mapping in deploy-plan.mjs — so tests/scripts/deploy-plan.test.mjs proves a
 // failing stamp leaves migrate/deploy uncalled against the SAME code that
 // runs here. Defining an extra wrangler call in this file, outside `ops`,
 // is the regression that split exists to prevent.

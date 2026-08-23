@@ -25,7 +25,7 @@ const tsconfig = relative(process.cwd(), themeTsconfigPath(id));
 console.log(`verify:theme — ${id} (from ${source})`);
 
 const steps = [
-  ["vp", ["exec", "vitest", "run", "test/storefront"]],
+  ["vp", ["exec", "vitest", "run", "tests/storefront"]],
   ["vp", ["exec", "astro", "check", "--tsconfig", tsconfig]],
   ["vp", ["exec", "astro", "build"]],
   ["node", ["scripts/check-built-css.mjs"]],

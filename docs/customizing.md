@@ -301,7 +301,7 @@ supported in this release.
 ## After you change something
 
 ```bash
-vp run theme:check && vp test run test/storefront
+vp run theme:check && vp test run tests/storefront
 ```
 
 The first enforces the import and request-context boundary, following each file
@@ -363,7 +363,7 @@ Leave `theme.config.json` naming `your-store`. Then run the gates:
 
 ```bash
 vp run theme:check
-vp test run test/storefront
+vp test run tests/storefront
 vp run verify
 ```
 

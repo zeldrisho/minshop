@@ -11,7 +11,7 @@ Captures the important choices from `docs/plan.md` and the 2026-08-23 vp-migrati
 - `pnpm-workspace.yaml` → `packages: [".", "mcp"]`, single `pnpm-lock.yaml`. `mcp/` stays isolated (`mcp/node_modules` symlinked via workspace, never hoisted to root — `agents`/`@modelcontextprotocol/sdk` stay out of storefront build).
 - Root + `mcp/package.json` both `packageManager: pnpm@10.25.0`, `devEngines.packageManager.onFail: download` — `vp install` downloads pnpm 10.25.0, no global `pnpm` required.
 - All commands via `vp`: `vp install` (workspace), `vp run <script>` (verify, dev, build, deploy), `vp test` (unit), `vp check` (fmt+lint), `vp exec <bin>` (astro, wrangler, tsc, vitest), `vp dlx` for one-offs. No `npm run`/`npx`/`pnpm exec` in scripts, docs, or workflows.
-- Scripts updated: `package.json` (`check`/`test`/`test:d1`/`verify` use `node`+`vp`), `scripts/deploy.mjs`/`verify-theme.mjs`/`check-mcp.sh` use `vp exec`, shell helpers (`provision-*`, `destroy-*`, `seed-*`, `backfill`, `admin-reset`, `reset`) use `vp exec wrangler`/`vp exec astro`, `test/integration/*.sh` use `vp exec wrangler`, `.github/workflows/verify.yml` single `vp install`.
+- Scripts updated: `package.json` (`check`/`test`/`test:d1`/`verify` use `node`+`vp`), `scripts/deploy.mjs`/`verify-theme.mjs`/`check-mcp.sh` use `vp exec`, shell helpers (`provision-*`, `destroy-*`, `seed-*`, `backfill`, `admin-reset`, `reset`) use `vp exec wrangler`/`vp exec astro`, `tests/integration/*.sh` use `vp exec wrangler`, `.github/workflows/verify.yml` single `vp install`.
 
 **Consequences:** `vp install` is the only install entry; CI needs one step; local `which pnpm` resolves to `~/.vite-plus/js_runtime` (managed).
 
@@ -25,7 +25,7 @@ Captures the important choices from `docs/plan.md` and the 2026-08-23 vp-migrati
 - Downgrade `anti-slop/*` from `error` → `warn` — strict rules kept as warnings while codebase is brought into compliance incrementally.
 - `lint.options` → `typeAware: true, typeCheck: false` — duplication removed; full type gate stays in `astro check` (`vp run check` / `verify`). `vp check` is now fmt + lint only.
 - `tsconfig.json` `types: ["@cloudflare/workers-types","node"]` + `devDep @types/node` — fixes `tsconfig-error: Cannot find type definition file for 'node'`.
-- Remaining `restrict-template-expressions` / `no-base-to-string` in `test/integration/*.mjs` and `FormData String(form.get(...))` kept as triaged warnings.
+- Remaining `restrict-template-expressions` / `no-base-to-string` in `tests/integration/*.mjs` and `FormData String(form.get(...))` kept as triaged warnings.
 
 **Result:** `vp check` 0 errors / ~460 warnings, `vp exec astro check` 0 errors.
 
@@ -39,7 +39,7 @@ Captures the important choices from `docs/plan.md` and the 2026-08-23 vp-migrati
 
 ## 4. Tests — oxfmt tolerance
 
-**Context:** `oxfmt` reformatted `src/pages/llms.txt.ts` and `src/features/digitalDelivery/rollout.ts` (single→double quotes, multiline `entitlementWriterActive`, newline splits), breaking strict regexes in `test/scripts/rollout-gates.test.mjs` + `test/scripts/deploy-plan.test.mjs` (8 failures).
+**Context:** `oxfmt` reformatted `src/pages/llms.txt.ts` and `src/features/digitalDelivery/rollout.ts` (single→double quotes, multiline `entitlementWriterActive`, newline splits), breaking strict regexes in `tests/scripts/rollout-gates.test.mjs` + `tests/scripts/deploy-plan.test.mjs` (8 failures).
 
 **Decision:** Make tests quote- and whitespace-tolerant: `lifecycleActive`/`entitlementWriterActive` → `\(\s*release`, `publicId:` → `publicId:\s*item`, `const claims` → `\s*\?`, `remove_deliverable` → `["']`, `mcpUrl` → `(?:''|"")`, `wrangler` → `["']wrangler["']`, count helper normalizes `"`→`'`. No source revert.
 

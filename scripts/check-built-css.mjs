@@ -12,7 +12,7 @@
  *     stylesheet silently bloats with (or leaks styling from) themes the build
  *     did not select. Found the hard way: Tailwind's default project-wide
  *     scan was re-acquiring the default theme's classes from the rendered HTML
- *     in test/baselines/*.txt.
+ *     in tests/baselines/*.txt.
  *
  *  2. Admin isolation — the Admin entry keeps its own stable palette and
  *     carries no theme's utilities and no theme's paper colour. Admin must stay
