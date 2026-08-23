@@ -4,7 +4,7 @@ set -euo pipefail
 # Reproducible MCP gate for fresh clones. The real deploy config is per-instance
 # and gitignored, so render the tracked template with inert, schema-valid ids for
 # Wrangler's local-only dry run.
-root="$(cd "$(dirname "$0")/.." && pwd)"
+root="$(cd "$(dirname "$0")/../.." && pwd)"
 check_config="$(mktemp "$root/mcp/.wrangler-check.XXXXXX.jsonc")"
 cleanup() { rm -f "$check_config"; }
 trap cleanup EXIT INT TERM

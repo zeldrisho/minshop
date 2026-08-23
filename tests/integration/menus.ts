@@ -4,7 +4,7 @@ import { Miniflare } from "miniflare";
 import {
   MENU_ITEMS_SQL,
   MENU_CAPS,
-  addMenuItem,
+  addMenuItem as _addMenuItem,
   moveMenuItem,
   reorderMenuItems,
   removeMenuItem,
@@ -13,6 +13,12 @@ import {
   visibleItems,
   catalogIsOrphaned,
 } from "../../src/features/navigation/db.ts";
+
+// The harness asserts directly on the AddResult union's internals without
+// narrowing each branch; this loose alias keeps that readable while production
+// code stays strictly typed.
+const addMenuItem = (...args: Parameters<typeof _addMenuItem>): Promise<any> =>
+  _addMenuItem(...args);
 import {
   targetChoices,
   unavailableReason,
@@ -26,7 +32,7 @@ import {
 // ceiling holds even when the table is overfilled behind the guard's back, and
 // that the migration's seed reproduces what a store already renders.
 //
-// Schema is hand-rolled to the production shape, matching test-media.mjs.
+// Schema is hand-rolled to the production shape, matching test-media.ts.
 // tests/integration/d1-integration.sh remains the sole full-migration gate.
 
 const mf = new Miniflare({
@@ -37,13 +43,13 @@ const mf = new Miniflare({
 });
 
 let failures = 0;
-const check = async (name, fn) => {
+const check = async (name: string, fn: () => Promise<void>) => {
   try {
     await fn();
     console.log(`  ✓ ${name}`);
   } catch (err) {
     failures++;
-    console.error(`  ✗ ${name}\n    ${err.message}`);
+    console.error(`  ✗ ${name}\n    ${err instanceof Error ? err.message : err}`);
   }
 };
 
@@ -78,7 +84,7 @@ const MIGRATION = readFileSync(
  * statement preceded by a comment block — which, in this migration, is all of
  * them. The migration has no semicolons or '--' inside string literals.
  */
-const statements = (sql) =>
+const statements = (sql: string): string[] =>
   sql
     .split("\n")
     .map((line) => line.replace(/^\s*--.*$/, ""))
@@ -87,7 +93,7 @@ const statements = (sql) =>
     .map((s) => s.replace(/\s+/g, " ").trim())
     .filter(Boolean);
 
-async function freshDb({ seedBefore } = {}) {
+async function freshDb({ seedBefore }: { seedBefore?: (db: D1Database) => Promise<void> } = {}) {
   const db = await mf.getD1Database("DB");
   for (const t of ["menu_items", "pages", "categories", "products", "settings"]) {
     await db.exec(`DROP TABLE IF EXISTS ${t}`);
@@ -103,19 +109,20 @@ async function freshDb({ seedBefore } = {}) {
   return db;
 }
 
-const addPage = (db, title, slug, published = 1) =>
+const addPage = (db: D1Database, title: string, slug: string, published = 1) =>
   db
     .prepare("INSERT INTO pages (title, slug, published) VALUES (?, ?, ?)")
     .bind(title, slug, published)
     .run();
-const addProduct = (db, name, slug, active = 1) =>
+const addProduct = (db: D1Database, name: string, slug: string, active = 1) =>
   db
     .prepare("INSERT INTO products (name, slug, active) VALUES (?, ?, ?)")
     .bind(name, slug, active)
     .run();
-const addCategory = (db, name, slug) =>
+const addCategory = (db: D1Database, name: string, slug: string) =>
   db.prepare("INSERT INTO categories (name, slug) VALUES (?, ?)").bind(name, slug).run();
-const rowsOf = async (db, sql) => (await db.prepare(sql).all()).results ?? [];
+const rowsOf = async (db: D1Database, sql: string): Promise<any[]> =>
+  (await db.prepare(sql).all<any>()).results ?? [];
 
 console.log("\nnavigation menus");
 
@@ -151,7 +158,11 @@ await check("seed reproduces the existing footer links, in the footer order", as
 });
 
 await check("seed adds the header Catalog item only when the home page is overridden", async () => {
-  const plain = await freshDb({ seedBefore: async (d) => addPage(d, "About", "about") });
+  const plain = await freshDb({
+    seedBefore: async (d) => {
+      await addPage(d, "About", "about");
+    },
+  });
   assert.equal((await rowsOf(plain, "SELECT * FROM menu_items WHERE location='header'")).length, 0);
 
   const overridden = await freshDb({
@@ -237,7 +248,11 @@ await check("partial unique index allows duplicates only where it should", async
 // ── the read ceiling ────────────────────────────────────────────────────────
 
 await check("the query caps each location even when the table is overfilled", async () => {
-  const db = await freshDb({ seedBefore: async (d) => addPage(d, "A", "a") });
+  const db = await freshDb({
+    seedBefore: async (d) => {
+      await addPage(d, "A", "a");
+    },
+  });
   await db.exec("DELETE FROM menu_items");
   // Straight past the add guard, the way a bad migration or direct write would.
   for (let i = 0; i < 60; i++) {
@@ -248,7 +263,7 @@ await check("the query caps each location even when the table is overfilled", as
       .bind(i)
       .run();
   }
-  const rows = (await db.prepare(MENU_ITEMS_SQL).all()).results ?? [];
+  const rows = (await db.prepare(MENU_ITEMS_SQL).all<any>()).results ?? [];
   assert.equal(
     rows.length,
     MENU_CAPS.header,
@@ -303,7 +318,7 @@ await check("add accepts available targets and assigns dense positions", async (
     { targetType: "page", targetId: 1 },
     { targetType: "product", targetId: 1 },
     { targetType: "category", targetId: 1 },
-  ]) {
+  ] as any[]) {
     assert.equal((await addMenuItem(db, { location: "header", label: null, ...t })).ok, true);
   }
   const rows = await rowsOf(
@@ -694,8 +709,9 @@ await check("reorder is scoped to one menu", async () => {
   // A tampered payload naming the footer item must not touch it. Assert the
   // stored POSITION, not just the rendered order: with one footer item the order
   // reads the same either way, so an order-only assertion cannot see the leak.
-  const positionOf = async (id) =>
-    (await db.prepare("SELECT position FROM menu_items WHERE id = ?").bind(id).first()).position;
+  const positionOf = async (id: number): Promise<any> =>
+    (await db.prepare("SELECT position FROM menu_items WHERE id = ?").bind(id).first<any>())
+      .position;
   const footerBefore = await positionOf(f1);
 
   assert.equal(await reorderMenuItems(db, "header", [h2, h1, f1]), false, "foreign id rejected");

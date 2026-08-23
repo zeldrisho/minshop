@@ -1,8 +1,9 @@
+import { mkdirSync, writeFileSync } from "node:fs";
 import { defineConfig } from "astro/config";
 import cloudflare from "@astrojs/cloudflare";
 import tailwindcss from "@tailwindcss/vite";
-import { resolveTheme } from "./scripts/theme/themes.mjs";
-import { themeCssPath, writeThemeArtifacts } from "./scripts/theme/theme-css.mjs";
+import { resolveTheme } from "./scripts/theme/themes.ts";
+import { themeCssPath, writeThemeArtifacts } from "./scripts/theme/theme-css.ts";
 
 // SSR on Cloudflare Workers. platformProxy lets `astro dev` read bindings
 // (D1, R2, vars) from wrangler.jsonc locally.
@@ -15,7 +16,7 @@ import { themeCssPath, writeThemeArtifacts } from "./scripts/theme/theme-css.mjs
 // an unstyled or wrongly styled site. The generated files are written for ALL
 // themes and are byte-identical no matter which theme this process selected, so a
 // concurrent build for another theme cannot fight a running dev server over
-// them (see the design rule in scripts/theme/theme-css.mjs).
+// them (see the design rule in scripts/theme/theme-css.ts).
 const theme = resolveTheme();
 writeThemeArtifacts();
 
@@ -26,8 +27,9 @@ writeThemeArtifacts();
 const themeStamp = {
   name: "minshop:theme-stamp",
   hooks: {
-    "astro:build:done": async () => {
-      const { writeFileSync, mkdirSync } = await import("node:fs");
+    "astro:build:done": () => {
+      // Static import: a dynamic one is routed through Vite's module runner,
+      // which is already closed by the time this hook runs.
       mkdirSync(new URL("./dist", import.meta.url).pathname, { recursive: true });
       writeFileSync(
         new URL("./dist/theme.json", import.meta.url).pathname,
@@ -36,6 +38,14 @@ const themeStamp = {
     },
   },
 };
+
+// Held in a variable rather than inline: `platformProxy` is forwarded verbatim
+// to @cloudflare/vite-plugin and is absent from the adapter's re-exported
+// Options type, which an inline literal's excess-property check would reject.
+const cloudflareAdapterOptions = {
+  imageService: "passthrough",
+  platformProxy: { enabled: true },
+} as const;
 
 export default defineConfig({
   output: "server",
@@ -47,8 +57,7 @@ export default defineConfig({
   adapter: cloudflare({
     // Keep Cloudflare Images opt-in. The adapter otherwise auto-provisions an
     // IMAGES binding even though minshop stores and serves originals from R2.
-    imageService: "passthrough",
-    platformProxy: { enabled: true },
+    ...cloudflareAdapterOptions,
   }),
   vite: {
     plugins: [tailwindcss()],

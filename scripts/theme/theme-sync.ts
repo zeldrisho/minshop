@@ -2,17 +2,17 @@
 /**
  * Regenerates the files that must agree with the themes on disk.
  *
- * `astro build` does this through astro.config.mjs, but `astro check` reads
+ * `astro build` does this through astro.config.ts, but `astro check` reads
  * tsconfig before that config is evaluated, and a fresh clone has never
  * generated any of them. Run this first so type checking and the boundary
  * checker see the same artifacts the build would.
  *
- * Writes are deterministic — see the design rule in theme-css.mjs. The
+ * Writes are deterministic — see the design rule in theme-css.ts. The
  * THEME variable changes which theme THIS process selects (reported below),
  * never what gets written.
  */
-import { resolveTheme } from "./themes.mjs";
-import { writeThemeArtifacts } from "./theme-css.mjs";
+import { resolveTheme } from "./themes.ts";
+import { writeThemeArtifacts } from "./theme-css.ts";
 
 const { ids, configured } = writeThemeArtifacts();
 const active = resolveTheme();

@@ -61,7 +61,7 @@ try {
   const inserted = await db
     .prepare("INSERT INTO orders (public_id, email) VALUES (?, ?) RETURNING id")
     .bind(orderPublicId, "c@example.com")
-    .first();
+    .first<any>();
   const reissued = await reissueGuestAccess(db, orderPublicId);
   assert.equal(reissued?.generation, 2);
   assert.equal(await resolveAccessToken(db, token), null, "old token stops resolving");
@@ -70,7 +70,7 @@ try {
   const queued = await db
     .prepare("SELECT kind, state FROM order_notifications WHERE order_id = ?")
     .bind(inserted.id)
-    .first();
+    .first<any>();
   assert.equal(
     queued?.kind,
     "guest-link-reissue:2",
@@ -85,7 +85,7 @@ try {
     await db
       .prepare("SELECT kind FROM order_notifications WHERE order_id = ? ORDER BY kind")
       .bind(inserted.id)
-      .all()
+      .all<any>()
   ).results.map((r) => r.kind);
   assert.deepEqual(kinds, ["guest-link-reissue:2", "guest-link-reissue:3"]);
 
@@ -139,7 +139,7 @@ try {
   // Customer-email guest URLs: tokenized for ord_ orders, legacy passthrough,
   // and null (omit link) when a new order somehow has no registry row.
   const url = await guestOrderUrl(db, orderPublicId, "https://s.example");
-  const current = await getGuestAccess(db, orderPublicId);
+  const current = (await getGuestAccess(db, orderPublicId))!;
   assert.equal(url, `https://s.example/order/${current.access_token}`);
   const legacy = "ab".repeat(16);
   assert.equal(

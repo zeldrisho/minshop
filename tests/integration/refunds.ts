@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { Miniflare } from "miniflare";
 import {
-  recordExternalRefund,
-  syncProviderRefund,
-  voidRecordedRefund,
+  recordExternalRefund as _recordExternalRefund,
+  syncProviderRefund as _syncProviderRefund,
+  voidRecordedRefund as _voidRecordedRefund,
   listRefunds,
   reversedRefundIds,
   openRefundReview,
@@ -13,6 +13,16 @@ import {
   listUnmatchedRefundEvents,
 } from "../../src/features/refunds/db.ts";
 import { persistRefundEvent, applyRefundEvent } from "../../src/features/refunds/sync.ts";
+
+// The harness asserts directly on discriminated-union internals
+// (res.advanced, made.refund) instead of narrowing every branch; these loose
+// aliases keep that readable while the production modules stay strictly typed.
+const recordExternalRefund = (...args: Parameters<typeof _recordExternalRefund>): Promise<any> =>
+  _recordExternalRefund(...args);
+const syncProviderRefund = (...args: Parameters<typeof _syncProviderRefund>): Promise<any> =>
+  _syncProviderRefund(...args);
+const voidRecordedRefund = (...args: Parameters<typeof _voidRecordedRefund>): Promise<any> =>
+  _voidRecordedRefund(...args);
 
 // Refund accounting against a real D1. The properties under test are the ones
 // a mocked database cannot show: that the guarded batches actually serialize,
@@ -26,13 +36,13 @@ const mf = new Miniflare({
 });
 
 let failures = 0;
-const check = async (name, fn) => {
+const check = async (name: string, fn: () => Promise<void>) => {
   try {
     await fn();
     console.log(`  ✓ ${name}`);
   } catch (err) {
     failures++;
-    console.error(`  ✗ ${name}\n    ${err.message}`);
+    console.error(`  ✗ ${name}\n    ${err instanceof Error ? err.message : err}`);
   }
 };
 
@@ -100,15 +110,15 @@ try {
 
   let seq = 0;
   /** Orders mutated directly by a fixture, bypassing the ledger on purpose. */
-  const forcedOrders = new Set();
-  const newOrder = async (opts = {}) => {
+  const forcedOrders = new Set<number>();
+  const newOrder = async (opts: Record<string, unknown> = {}): Promise<any> => {
     const {
       total = 10000,
       status = "paid",
       method = "lightning",
       provider = 0,
       external = 0,
-    } = opts;
+    }: any = opts;
     seq++;
     await db
       .prepare(
@@ -118,17 +128,18 @@ try {
       )
       .bind(`ord-${seq}`, total, status, method, provider, external)
       .run();
-    return (
-      await db.prepare("SELECT id FROM orders WHERE public_id = ?").bind(`ord-${seq}`).first()
-    ).id;
+    return (await db
+      .prepare("SELECT id FROM orders WHERE public_id = ?")
+      .bind(`ord-${seq}`)
+      .first<any>())!.id as number;
   };
-  const totals = (id) =>
+  const totals = (id: number): Promise<any> =>
     db
       .prepare(
         "SELECT refunded_cents r, provider_refunded_cents p, external_refunded_cents e, status FROM orders WHERE id = ?",
       )
       .bind(id)
-      .first();
+      .first<any>();
 
   console.log("manual external refunds");
 
@@ -366,8 +377,8 @@ try {
     assert.ok(ledger.some((r) => r.kind === "manual_reversal" && r.amount_cents === -10000));
     // The reversed row stays 'succeeded' so the ledger still sums to the
     // external component; the reversal link is what marks it undone.
-    assert.equal(ledger.find((r) => r.id === made.refund.id).status, "succeeded");
-    assert.ok(reversedRefundIds(ledger).has(made.refund.id));
+    assert.equal(ledger.find((r: any) => r.id === made.refund!.id)!.status, "succeeded");
+    assert.ok(reversedRefundIds(ledger).has(made.refund!.id));
   });
 
   await check("the same refund cannot be voided twice", async () => {
@@ -412,31 +423,35 @@ try {
     let o = await db
       .prepare("SELECT refund_review_reason rr, refund_reviewed_at ra FROM orders WHERE id = ?")
       .bind(id)
-      .first();
+      .first<any>();
     assert.ok(o.ra, "acknowledged");
 
     await openRefundReview(db, id, "exceeds_total");
     o = await db
       .prepare("SELECT refund_review_reason rr, refund_reviewed_at ra FROM orders WHERE id = ?")
       .bind(id)
-      .first();
+      .first<any>();
     assert.equal(o.rr, "exceeds_total");
     assert.equal(o.ra, null, "a new conflict must reopen the review");
   });
 
   console.log("provider webhook events");
 
-  const eventStatus = (eid) =>
+  const eventStatus = (eid: string): Promise<any> =>
     db
       .prepare("SELECT status FROM refund_sync_events WHERE provider_event_id = ?")
       .bind(eid)
-      .first();
-  const withPi = async (pi) => {
+      .first<any>();
+  const withPi = async (pi: string) => {
     const id = await newOrder({ method: "stripe" });
     await db.prepare("UPDATE orders SET provider_payment_id = ? WHERE id = ?").bind(pi, id).run();
     return id;
   };
-  const evt = (o) => ({ providerChargeId: "ch_x", currency: "usd", ...o });
+  const evt = (o: Record<string, unknown>): any => ({
+    providerChargeId: "ch_x",
+    currency: "usd",
+    ...o,
+  });
 
   await check("a refund event applies to the order it names", async () => {
     const id = await withPi("pi_ok");
@@ -470,7 +485,7 @@ try {
     const n = await db
       .prepare("SELECT COUNT(*) n FROM refunds WHERE order_id = ? AND kind = 'provider_sync'")
       .bind(id)
-      .first();
+      .first<any>();
     assert.equal(n.n, 1, "a retry must not add a second ledger row");
   });
 
@@ -548,7 +563,7 @@ try {
     const o = await db
       .prepare("SELECT provider_payment_id p FROM orders WHERE id = ?")
       .bind(id)
-      .first();
+      .first<any>();
     assert.equal(o.p, "pi_legacy", "payment id must be backfilled");
   });
 
@@ -589,7 +604,7 @@ try {
     const o = await db
       .prepare("SELECT provider_payment_id p FROM orders WHERE id = ?")
       .bind(owner)
-      .first();
+      .first<any>();
     assert.equal(o.p, "pi_owner", "existing payment id must not be overwritten");
   });
 
@@ -609,7 +624,7 @@ try {
     const o = await db
       .prepare("SELECT refund_review_reason rr, refund_reviewed_at ra FROM orders WHERE id = ?")
       .bind(id)
-      .first();
+      .first<any>();
     assert.equal(o.rr, "currency_mismatch");
     assert.equal(o.ra, null);
   });
@@ -635,11 +650,11 @@ try {
 
   console.log("conflict review across every path");
 
-  const reviewOf = (id) =>
+  const reviewOf = (id: number): Promise<any> =>
     db
       .prepare("SELECT refund_review_reason rr, refund_reviewed_at ra FROM orders WHERE id = ?")
       .bind(id)
-      .first();
+      .first<any>();
 
   await check("a manual provider sync over the total opens a review", async () => {
     // $60 recorded by hand, then an $80 provider total on a $100 order: each
@@ -711,7 +726,7 @@ try {
     const e = await db
       .prepare("SELECT last_error le FROM refund_sync_events WHERE provider_event_id = ?")
       .bind("ev_dismiss")
-      .first();
+      .first<any>();
     assert.ok(e.le.includes("currency_mismatch"), `audit record lost the reason: ${e.le}`);
     assert.ok(e.le.includes("admin"), "and should record who dismissed it");
   });
@@ -765,14 +780,14 @@ try {
           WHERE refunded_cents <> MIN(amount_total_cents,
                                       provider_refunded_cents + external_refunded_cents)`,
       )
-      .first();
+      .first<any>();
     assert.equal(row.n, 0);
   });
 
   await check("net revenue never went negative", async () => {
     const row = await db
       .prepare("SELECT COUNT(*) n FROM orders WHERE amount_total_cents - refunded_cents < 0")
-      .first();
+      .first<any>();
     assert.equal(row.n, 0);
   });
 
@@ -786,7 +801,7 @@ try {
                              AND r.kind IN ('manual_external','demo','manual_reversal')), 0) s
            FROM orders o`,
       )
-      .all();
+      .all<any>();
     for (const r of rows.results) {
       if (forcedOrders.has(r.id)) continue;
       assert.equal(r.e, r.s, `order ${r.id}: external ${r.e} != ledger sum ${r.s}`);

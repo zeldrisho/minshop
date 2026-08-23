@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-// .mjs for the same reason as the sibling script tests: tsconfig's `types` is
+// .ts for the same reason as the sibling script tests: tsconfig's `types` is
 // pinned to the Cloudflare types, so node builtins have no declarations here.
 import { readdirSync, readFileSync } from "node:fs";
 

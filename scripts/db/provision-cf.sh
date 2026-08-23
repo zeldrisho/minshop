@@ -23,7 +23,7 @@ if [[ ! "$SLUG" =~ ^[a-z][a-z0-9-]{1,40}$ ]]; then
   exit 1
 fi
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 W="vp exec wrangler"
 DB_NAME="${SLUG}-db"
