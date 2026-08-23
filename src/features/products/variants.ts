@@ -48,7 +48,12 @@ export async function listVariants(
   return results ?? [];
 }
 
-/** Extras for a product, in display order. Active-only unless includeInactive. */
+/**
+ * Lists a product's extras in display order.
+ *
+ * @param includeInactive - Whether to include inactive extras.
+ * @returns The product's extras, ordered by position and ID.
+ */
 export async function listExtras(
   db: D1Database,
   productId: number,
@@ -62,12 +67,21 @@ export async function listExtras(
   return results ?? [];
 }
 
-/** One variant by id (any product), or null. */
+/**
+ * Fetches a product variant by its database ID.
+ *
+ * @param id - The variant's database ID
+ * @returns The matching product variant, or `null` if no variant has that ID
+ */
 export async function getVariant(db: D1Database, id: number): Promise<ProductVariant | null> {
   return db.prepare("SELECT * FROM product_variants WHERE id = ?").bind(id).first<ProductVariant>();
 }
 
-/** Active variants for many ids in one cart-resolution read. */
+/**
+ * Retrieves active product variants matching the specified database IDs.
+ *
+ * @returns The matching active product variants.
+ */
 export async function getActiveVariantsByIds(
   db: D1Database,
   ids: number[],
@@ -82,7 +96,11 @@ export async function getActiveVariantsByIds(
   return results ?? [];
 }
 
-/** Active variants for many public IDs in one cart-resolution read. */
+/**
+ * Fetches active variants matching the provided public IDs.
+ *
+ * @returns The matching active product variants.
+ */
 export async function getActiveVariantsByPublicIds(
   db: D1Database,
   publicIds: string[],
@@ -114,7 +132,12 @@ export async function getActiveExtrasByIds(db: D1Database, ids: number[]): Promi
   return results ?? [];
 }
 
-/** Active extras for many public IDs in one cart-resolution read (any product). */
+/**
+ * Resolves active extras across products by their public IDs.
+ *
+ * @param publicIds - Public IDs to look up
+ * @returns The matching active extras
+ */
 export async function getActiveExtrasByPublicIds(
   db: D1Database,
   publicIds: string[],
@@ -129,7 +152,12 @@ export async function getActiveExtrasByPublicIds(
   return results ?? [];
 }
 
-/** Extras belonging to a product, selected by prefixed public IDs. */
+/**
+ * Retrieves active extras belonging to a product by their public IDs.
+ *
+ * @param publicIds - The public IDs used to select the extras.
+ * @returns The matching extras, ordered by position and ID.
+ */
 export async function getExtrasByPublicIds(
   db: D1Database,
   productId: number,
@@ -146,7 +174,13 @@ export async function getExtrasByPublicIds(
   return results ?? [];
 }
 
-/** Active extras for the given ids that belong to `productId` (drops foreign/inactive). */
+/**
+ * Retrieves active extras belonging to a specific product.
+ *
+ * @param productId - The product whose extras may be returned
+ * @param ids - The extra IDs to retrieve
+ * @returns The matching active extras, ordered by position and ID
+ */
 export async function getExtrasByIds(
   db: D1Database,
   productId: number,
@@ -165,7 +199,10 @@ export async function getExtrasByIds(
 
 // ── Admin writes ─────────────────────────────────────────────────────────────
 
-/** The variant group's display name on a product (e.g. "Size"); null = none. */
+/** Sets the display label for a product’s variant group.
+
+ * @param label - The label to display, or `null` to clear it.
+ */
 export async function setVariantLabel(
   db: D1Database,
   productId: number,
@@ -177,6 +214,12 @@ export async function setVariantLabel(
     .run();
 }
 
+/**
+ * Creates a product variant with its pricing, inventory, labeling, and optional metadata.
+ *
+ * @param productId - The ID of the product that owns the variant
+ * @param v - The variant data to store
+ */
 export async function createVariant(
   db: D1Database,
   productId: number,
@@ -241,10 +284,21 @@ export async function clearVariantImage(db: D1Database, imageId: number): Promis
     .run();
 }
 
+/**
+ * Deletes a product variant by its database ID.
+ *
+ * @param id - The database ID of the variant to delete
+ */
 export async function deleteVariant(db: D1Database, id: number): Promise<void> {
   await db.prepare("DELETE FROM product_variants WHERE id = ?").bind(id).run();
 }
 
+/**
+ * Creates a purchasable extra for a product.
+ *
+ * @param productId - The ID of the product associated with the extra
+ * @param e - The extra's label, price adjustment in cents, and optional display position
+ */
 export async function createExtra(
   db: D1Database,
   productId: number,
@@ -275,6 +329,12 @@ async function nextPosition(
   return (row?.m ?? -1) + 1;
 }
 
+/**
+ * Updates the label and price adjustment for a product extra.
+ *
+ * @param id - The database ID of the product extra
+ * @param e - The updated label and price adjustment in cents
+ */
 export async function updateExtra(
   db: D1Database,
   id: number,
@@ -286,6 +346,11 @@ export async function updateExtra(
     .run();
 }
 
+/**
+ * Deletes a product extra by its database ID.
+ *
+ * @param id - The database ID of the extra to delete
+ */
 export async function deleteExtra(db: D1Database, id: number): Promise<void> {
   await db.prepare("DELETE FROM product_extras WHERE id = ?").bind(id).run();
 }
@@ -307,10 +372,11 @@ export async function deleteExtra(db: D1Database, id: number): Promise<void> {
  * Prices arrive in major units and are scaled to `currency`.
  */
 /**
- * Reject a mistyped variant weight with nothing written. This is separate from
- * applyVariantForm so the route can run it BEFORE the product/image/category
- * writes — validating mid-way produced a half-saved edit behind an error page,
- * and under weight pricing a silently dropped weight is a mis-quoted order.
+ * Validates submitted variant weights before they are saved.
+ *
+ * @param form - Form data containing variant weight values.
+ * @param weightUnit - Unit used to interpret the submitted weights.
+ * @returns An error message for the first invalid weight, or `null` when all weights are valid.
  */
 export function validateVariantWeights(form: FormData, weightUnit: WeightUnit): string | null {
   const raws = form.getAll("v_weight").map((v) => String(v));
@@ -330,6 +396,19 @@ export function validateVariantWeights(form: FormData, weightUnit: WeightUnit): 
   return null;
 }
 
+/**
+ * Applies submitted variant and extra changes to a product.
+ *
+ * Validates weights, updates the variant-group label, and creates, updates, or
+ * removes product-owned variants and extras. Image references are restricted to
+ * the product's gallery, and prices are converted from major currency units.
+ *
+ * @param productId - The product whose variants and extras are being edited
+ * @param form - The submitted variants and extras form data
+ * @param currency - The currency used to interpret submitted prices
+ * @param weightUnit - The unit used for submitted variant weights
+ * @returns An error message when validation fails; otherwise, an empty object
+ */
 export async function applyVariantForm(
   db: D1Database,
   productId: number,

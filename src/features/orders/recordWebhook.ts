@@ -15,24 +15,13 @@ import { markPendingSettled } from "../payments/lightning/pending";
 import { purgeStockProductCache } from "../cache/purge";
 
 /**
- * Persist a verified paid-webhook order (idempotent on the provider session id)
- * and fire the confirmation + owner-notification emails exactly once. Shared by
- * the default `/api/webhook` and the per-provider `/api/webhook/[provider]`
- * routes; `paymentMethod` records which rail settled it (for refund routing).
- * Email failures are swallowed — the order is already saved.
+ * Processes a verified payment webhook by updating reservations, recording refunds or paid orders, and delivering related notifications.
  *
- * `settings` is optional but every caller already has it (middleware for /pay,
- * an explicit load in the webhook routes). Passing it removes four D1 reads from
- * the settlement path — the whole-table settings scan plus the three individual
- * lookups whose values are already on `StoreSettings`.
- *
- * `waitUntil` (the ExecutionContext's, when the caller has one) moves the whole
- * notification pipeline — provider construction, the order/items reads, both
- * sends — off the response's critical path. Best-effort by design: sends were
- * already swallowed on failure, so backgrounding them weakens nothing the
- * caller could observe. Callers that need delivery attempted before they
- * answer (the provider webhook routes, whose retries are the safety net) simply
- * don't pass it.
+ * @param result - The verified webhook outcome to process.
+ * @param origin - The origin used for notification links.
+ * @param paymentMethod - The payment rail associated with the webhook, used for refund processing.
+ * @param settings - Optional store settings used for notification delivery.
+ * @param waitUntil - Optional callback for deferring notification delivery until after the response.
  */
 export async function recordPaidWebhookOrder(
   result: WebhookResult,

@@ -46,7 +46,12 @@ export interface ProductInput extends ProductFields {
   slug: string;
 }
 
-/** A page of active products for the storefront, newest first. */
+/**
+ * Retrieves a page of active products for the storefront.
+ *
+ * @param orderBy - SQL ordering expression; defaults to newest products first.
+ * @returns The matching active products.
+ */
 export async function listProducts(
   db: D1Database,
   limit: number,
@@ -88,6 +93,15 @@ export interface ProductFilter {
 }
 const EMPTY_PRODUCT_FILTER: ProductFilter = { where: "", params: [] };
 
+/**
+ * Retrieves products for administrative views, including inactive products and lifetime quantities sold from paid orders.
+ *
+ * @param limit - The maximum number of products to return
+ * @param offset - The number of products to skip
+ * @param orderBy - The ordering expression for the results
+ * @param filter - The product conditions and parameters to apply
+ * @returns The matching products with lifetime paid-order quantities sold
+ */
 export async function listAllProducts(
   db: D1Database,
   limit: number,
@@ -128,9 +142,11 @@ export async function countAllProducts(
 }
 
 /**
- * Stable keyset page for catalog-wide background/admin jobs. Unlike the admin
- * table query this does not calculate sales totals, and unlike OFFSET pagination
- * it keeps making progress if rows are removed while a job is running.
+ * Retrieves products after a specified ID for stable ascending pagination.
+ *
+ * @param afterId - The exclusive lower-bound product ID
+ * @param limit - The maximum number of products to retrieve
+ * @returns Products with IDs greater than `afterId`, ordered by ascending ID
  */
 export async function listProductsAfterId(
   db: D1Database,
@@ -177,6 +193,12 @@ export async function setRelatedIds(
     .run();
 }
 
+/**
+ * Retrieves active products for the specified IDs in the caller's order.
+ *
+ * @param ids - The product IDs to retrieve
+ * @returns The matching active products, excluding missing products and duplicate IDs
+ */
 export async function getProductsByIds(db: D1Database, ids: number[]): Promise<Product[]> {
   if (ids.length === 0) return [];
   const placeholders = ids.map(() => "?").join(",");
@@ -188,7 +210,12 @@ export async function getProductsByIds(db: D1Database, ids: number[]): Promise<P
   return ids.map((id) => byId.get(id)).filter((p): p is Product => p !== undefined);
 }
 
-/** Active products for many public IDs in one cart-resolution read. */
+/**
+ * Retrieves active products matching multiple public IDs.
+ *
+ * @param publicIds - The public IDs to retrieve.
+ * @returns The matching active products.
+ */
 export async function getProductsByPublicIds(
   db: D1Database,
   publicIds: string[],
@@ -202,11 +229,22 @@ export async function getProductsByPublicIds(
   return results ?? [];
 }
 
+/**
+ * Retrieves a product by its numeric ID.
+ *
+ * @param id - The product ID
+ * @returns The matching product, or `null` when no product exists with that ID
+ */
 export async function getProduct(db: D1Database, id: number): Promise<Product | null> {
   return db.prepare("SELECT * FROM products WHERE id = ?").bind(id).first<Product>();
 }
 
-/** Active products at or below a stock threshold, lowest first (for the dashboard). */
+/**
+ * Finds active products at or below a stock threshold, ordered by lowest stock first.
+ *
+ * @param threshold - The maximum stock level to include
+ * @returns Active products meeting the stock threshold
+ */
 export async function lowStockProducts(
   db: D1Database,
   threshold: number,
@@ -243,7 +281,12 @@ export async function listProductImages(
   return results ?? [];
 }
 
-/** Append an image to a product's gallery (next position). */
+/**
+ * Adds an image to a product's gallery at the next available position.
+ *
+ * @param productId - The product whose gallery receives the image
+ * @param imageKey - The image storage key
+ */
 export async function addProductImage(
   db: D1Database,
   productId: number,
@@ -263,6 +306,12 @@ export async function addProductImage(
   );
 }
 
+/**
+ * Retrieves a product gallery image by its numeric ID.
+ *
+ * @param imageId - The gallery image ID
+ * @returns The matching product image, or `null` if no image exists with that ID
+ */
 export async function getProductImage(
   db: D1Database,
   imageId: number,
@@ -273,6 +322,11 @@ export async function getProductImage(
     .first<ProductImageRow>();
 }
 
+/**
+ * Deletes a product gallery image row by its numeric ID.
+ *
+ * @param imageId - The ID of the gallery image row to delete
+ */
 export async function deleteProductImageRow(db: D1Database, imageId: number): Promise<void> {
   await db.prepare("DELETE FROM product_images WHERE id = ?").bind(imageId).run();
 }
@@ -290,7 +344,12 @@ export async function replaceProductImageKey(
     .run();
 }
 
-/** Set an image's alt text (empty string → null). */
+/**
+ * Sets the alt text for a product image.
+ *
+ * @param imageId - The product image ID
+ * @param alt - The alt text; whitespace-only text is stored as `null`
+ */
 export async function setProductImageAlt(
   db: D1Database,
   imageId: number,
@@ -375,7 +434,7 @@ export async function syncPrimaryImage(db: D1Database, productId: number): Promi
   await setPrimaryImage(db, productId, imgs[0]?.image_key ?? null);
 }
 
-/** Move an image to the front of the gallery (→ becomes the primary). */
+/** Moves an image to the front of a product's gallery and makes it primary. */
 export async function makeImagePrimary(
   db: D1Database,
   productId: number,
@@ -387,7 +446,12 @@ export async function makeImagePrimary(
   await syncPrimaryImage(db, productId);
 }
 
-/** Product by its prefixed public ID (boundary resolution; null if missing). */
+/**
+ * Retrieves a product by its public ID.
+ *
+ * @param publicId - The product's public identifier
+ * @returns The matching product, or `null` if no product is found
+ */
 export async function getProductByPublicId(
   db: D1Database,
   publicId: string,
@@ -395,12 +459,22 @@ export async function getProductByPublicId(
   return db.prepare("SELECT * FROM products WHERE public_id = ?").bind(publicId).first<Product>();
 }
 
-/** Single product by public slug, or null if missing. */
+/**
+ * Retrieves a product by its public slug.
+ *
+ * @param slug - The product slug to search for
+ * @returns The matching product, or `null` if no product is found
+ */
 export async function getProductBySlug(db: D1Database, slug: string): Promise<Product | null> {
   return db.prepare("SELECT * FROM products WHERE slug = ?").bind(slug).first<Product>();
 }
 
-/** Insert a product and return its new id (needed for category links). */
+/**
+ * Creates a product with a generated public ID.
+ *
+ * @param p - The product fields to insert.
+ * @returns The new product's numeric ID.
+ */
 export async function createProduct(db: D1Database, p: ProductInput): Promise<number> {
   return withPublicId("product", async (publicId) => {
     const row = await db
@@ -427,6 +501,12 @@ export async function createProduct(db: D1Database, p: ProductInput): Promise<nu
   });
 }
 
+/**
+ * Updates the editable fields of a product.
+ *
+ * @param id - The numeric ID of the product to update
+ * @param p - The product fields to store
+ */
 export async function updateProduct(db: D1Database, id: number, p: ProductInput): Promise<void> {
   await db
     .prepare(
@@ -466,6 +546,11 @@ export async function setProductFile(
     .run();
 }
 
+/**
+ * Deletes a product and its associated category links and gallery images.
+ *
+ * @param id - The numeric ID of the product to delete
+ */
 export async function deleteProduct(db: D1Database, id: number): Promise<void> {
   // Clear category links first (FKs aren't enforced on D1).
   await db.batch([

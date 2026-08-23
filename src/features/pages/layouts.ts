@@ -65,9 +65,10 @@ export const PAGE_LAYOUT_OPTIONS = PAGE_LAYOUT_KEYS.map((key) => ({
 }));
 
 /**
- * Coerce stored/submitted values to a known preset. Unknown values fall back to
- * the default rather than throwing: a page written by a newer build (or a preset
- * a developer later removes) must still render.
+ * Normalizes a stored or submitted value to a supported page layout preset.
+ *
+ * @param value - The value to normalize
+ * @returns The matching page layout preset, or the default preset when the value is invalid or unknown
  */
 export function normalizePageLayout(value: unknown): PageLayout {
   // hasOwn, not `in`: `'toString' in PAGE_LAYOUTS` is true via the prototype

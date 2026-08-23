@@ -3,10 +3,10 @@ import type { Product } from "./db";
 import { normalizeSearchQuery } from "../search/query";
 
 /**
- * Turn raw user input into a safe FTS5 MATCH query. FTS5 throws a syntax error
- * on bare special characters (`-`, `"`, `:`, `*`, etc.), so we keep only
- * alphanumeric tokens and prefix-match each one (`tee` → `tee*`). Returns null
- * when there's nothing searchable.
+ * Converts raw search text into an FTS5 prefix query.
+ *
+ * @param raw - The search text to convert
+ * @returns A space-separated prefix query, or `null` when no searchable tokens exist
  */
 export function toFtsQuery(raw: string): string | null {
   const tokens = normalizeSearchQuery(raw)
@@ -17,6 +17,12 @@ export function toFtsQuery(raw: string): string | null {
   return tokens.map((t) => `${t}*`).join(" ");
 }
 
+/**
+ * Builds a parameterized SQL condition that excludes the specified product IDs.
+ *
+ * @param ids - Product IDs to exclude
+ * @returns A `NOT IN` condition with one placeholder per ID, or an empty string when no IDs are provided.
+ */
 function exclusionSql(ids: number[]): string {
   return ids.length > 0 ? ` AND p.id NOT IN (${ids.map(() => "?").join(",")})` : "";
 }
@@ -85,7 +91,11 @@ export function editDistance(a: string, b: string): number {
   return prev[n];
 }
 
-/** Distinct ≥3-char words from active products' name + description. */
+/**
+ * Builds a vocabulary of searchable words from active products.
+ *
+ * @returns Distinct lowercase alphanumeric words containing at least three characters.
+ */
 async function productVocabulary(db: D1Database): Promise<string[]> {
   const { results } = await db
     .prepare("SELECT name, description FROM products WHERE active = 1")
@@ -99,9 +109,10 @@ async function productVocabulary(db: D1Database): Promise<string[]> {
 }
 
 /**
- * When a search finds nothing, propose a corrected query by snapping each token
- * to the nearest product word within a small edit distance. Returns null if no
- * token is improved. Runs in the Worker (no spellfix1 needed on D1).
+ * Suggests corrections for misspelled search tokens using active product vocabulary.
+ *
+ * @param raw - The search query to tokenize and correct
+ * @returns The corrected query when at least one token changes, or `null` when no correction is available
  */
 export async function suggestQuery(db: D1Database, raw: string): Promise<string | null> {
   const tokens = raw.toLowerCase().match(/[a-z0-9]+/g);

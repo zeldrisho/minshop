@@ -25,16 +25,22 @@ const ALL_METHODS: PaymentMethod[] = ["stripe", "lightning", "opennode"];
 // else its button leads to setup instructions; demo always works.
 const OFFERED: PaymentMethod[] = ["stripe", "lightning", "demo"];
 
+/**
+ * Determines whether a value identifies a supported payment method.
+ *
+ * @param value - The value to evaluate
+ * @returns `true` if the value is a supported payment method, `false` otherwise.
+ */
 export function isPaymentMethod(value: string): value is PaymentMethod {
   return value === "stripe" || value === "lightning" || value === "opennode" || value === "demo";
 }
 
 /**
- * Whether a method can actually process a payment right now. Real rails need their
- * keys (and Lightning its node URL) — all configured in the admin dashboard and
- * read from the runtime settings overlay (`Astro.locals.settings` /
- * getStoreSettings). Sync (no decryption) so it's cheap per render — the actual key
- * is only decrypted in getPaymentProvider. Demo always works.
+ * Determines whether a payment method is configured and ready for use.
+ *
+ * @param method - The payment method to check
+ * @param settings - Store payment and Lightning configuration
+ * @returns `true` if the method is available for processing payments, `false` otherwise
  */
 export function isMethodAvailable(
   method: PaymentMethod,
@@ -72,11 +78,10 @@ export function defaultMethod(settings: StoreSettings): PaymentMethod {
 }
 
 /**
- * Methods a buyer/agent can actually pay with right now — the configured real
- * rails plus demo, minus any the admin has disabled at runtime. Used by the agent
- * checkout + discovery, so callers are never handed a method that isn't wired up
- * (or has been switched off). May be EMPTY (admin disabled everything) — callers
- * hide checkout rather than falling back to a method nobody enabled.
+ * Lists the payment methods currently configured and enabled for checkout, with the default method prioritized.
+ *
+ * @param settings - Store payment configuration, including the default and disabled methods
+ * @returns The available payment methods in checkout order; may be empty if all methods are disabled
  */
 export function enabledMethods(settings: StoreSettings, vault = vaultReady()): PaymentMethod[] {
   const off = new Set(settings.disabledPaymentMethods);
@@ -91,11 +96,14 @@ export function enabledMethods(settings: StoreSettings, vault = vaultReady()): P
 }
 
 /**
- * Methods the checkout UI shows as buttons — Card, Lightning, Demo (plus any
- * other configured rail, e.g. OpenNode), minus any the admin disabled. Unlike
- * enabledMethods, this keeps UNconfigured-but-not-disabled real rails so they can
- * render a "set this up" link. May be EMPTY when the admin disables everything —
- * the cart/product pages then hide checkout entirely.
+ * Determines which payment methods the checkout interface should offer.
+ *
+ * Includes setup links for unconfigured Stripe and Lightning methods, configured
+ * additional payment methods, and the demo method, excluding administrator-disabled
+ * methods.
+ *
+ * @param settings - Store payment settings and disabled-method configuration
+ * @returns The payment methods available for display, which may be empty
  */
 export function offeredMethods(settings: StoreSettings, vault = vaultReady()): PaymentMethod[] {
   const off = new Set(settings.disabledPaymentMethods);
@@ -106,11 +114,11 @@ export function offeredMethods(settings: StoreSettings, vault = vaultReady()): P
 }
 
 /**
- * Build a concrete payment provider. `method` selects the rail; omitted → the
- * store default. Keys/URLs are resolved from the admin config (D1 settings + the
- * encrypted vault). Real methods fail closed when their secrets cannot be
- * decrypted; only an explicit `demo` selection constructs the simulator. The
- * checkout + webhook + refund routes are the only callers.
+ * Creates the payment provider selected for the store or by the caller.
+ *
+ * @param method - The payment method to create; when omitted, the store's configured default is used.
+ * @returns The configured payment provider.
+ * @throws Error if the selected OpenNode or Stripe provider lacks required credentials.
  */
 export async function getPaymentProvider(method?: PaymentMethod): Promise<PaymentProvider> {
   const settings = await getStoreSettings(env.DB);

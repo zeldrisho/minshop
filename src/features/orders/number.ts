@@ -7,17 +7,11 @@ export interface OrderNumberConfig {
 }
 
 /**
- * Friendly customer-facing order number, derived deterministically from the
- * internal order id — no storage, no migration, no insert-time race.
+ * Computes a deterministic customer-facing order number from an internal order ID.
  *
- *   number = offset + (id - 1) * step + jitter(id)
- *
- * `offset` sets the start, `step` spaces consecutive orders, and `randomStep`
- * adds a deterministic per-order jitter in [0, randomStep] (via a multiplicative
- * hash of the id) so the numbers don't read as a raw sequential count.
- *
- * Keep `step > randomStep` so the sequence stays strictly increasing and unique.
- * (The number is for humans; the unguessable URL uses the random public_id.)
+ * @param id - The internal order ID.
+ * @param cfg - Configuration defining the starting offset, spacing, and optional jitter range.
+ * @returns The calculated customer-facing order number.
  */
 export function orderNumber(id: number, cfg: OrderNumberConfig): number {
   const jitter = cfg.randomStep > 0 ? (Math.imul(id, 2654435761) >>> 0) % (cfg.randomStep + 1) : 0;
@@ -25,8 +19,12 @@ export function orderNumber(id: number, cfg: OrderNumberConfig): number {
 }
 
 /**
- * Customer-facing order reference: the ord_ token portion for new orders;
- * legacy orders keep their previously communicated calculated number.
+ * Generates the public reference for an order.
+ *
+ * @param publicId - The public identifier used to derive the order token
+ * @param id - The order's numeric identifier
+ * @param cfg - Configuration for calculating the fallback order number
+ * @returns A public order token when `publicId` is available; otherwise, the calculated order number as a string
  */
 export function orderReference(
   publicId: string | null,

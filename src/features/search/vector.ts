@@ -5,9 +5,10 @@ import { getProductsByIds, type Product } from "../products/db";
 import { normalizeSearchQuery } from "./query";
 
 /**
- * Embed text with a Workers AI embedding model → a vector. The bge models return
- * `{ data: [[...numbers]] }`; for one input the vector is `data[0]`. Pure (takes
- * the binding as a param) so the shape-parsing is unit-testable with a mock.
+ * Generates an embedding vector for a text input.
+ *
+ * @returns The embedding vector.
+ * @throws If the embedding response is missing or empty.
  */
 export async function embedText(ai: Ai, model: string, text: string): Promise<number[]> {
   // The model id is a string literal in the binding's overloads; cast through.
@@ -20,10 +21,11 @@ export async function embedText(ai: Ai, model: string, text: string): Promise<nu
 }
 
 /**
- * The text we embed for a product: name + description + its category names. The
- * category line gives the vector class context, so a query like "outdoor gear"
- * matches products in the Outdoors category even when those words aren't in the
- * name/description. `categoryNames` is optional (omitted → just name+description).
+ * Builds the text representation used to embed a product.
+ *
+ * @param p - The product name and optional description to include.
+ * @param categoryNames - Category names that provide additional product context.
+ * @returns The product name, description excerpt, and category context joined by newlines.
  */
 export function productEmbedText(
   p: { name: string; description: string | null },

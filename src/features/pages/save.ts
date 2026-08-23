@@ -13,20 +13,15 @@ export interface SaveResult {
 }
 
 /**
- * Persist a page body and rebuild its media associations, atomically.
+ * Saves a page body and updates its media associations.
  *
- * Unresolved media never costs the author their work: the text is always saved.
- * What it blocks is a DRAFT going live with images that would render broken.
- * An already-published page is left published — silently unpublishing a live
- * page because one image went missing is a far worse outcome than one broken
- * image the admin is warned about.
+ * Missing media is reported while the page content is still saved. A requested
+ * publication is refused when media is unresolved, while explicit
+ * unpublishing and the published state of an existing live page are preserved.
  *
- * The claims and the publish decision go in ONE batch, which D1 runs as a
- * transaction. Writing them separately left a race: media deleted after the
- * lookup but before the claims landed would be skipped silently, and the page
- * had already been published by then. Here the UPDATE decides `published` from
- * a COUNT of the rows the same transaction just claimed, so a claim that lost
- * to a concurrent delete refuses the draft-to-live transition instead.
+ * @param fields - The page content and requested publication state.
+ * @param options - Options used to resolve media references.
+ * @returns The unresolved media keys, whether publication was refused, and the stored publication state.
  */
 export async function savePageBody(
   db: D1Database,

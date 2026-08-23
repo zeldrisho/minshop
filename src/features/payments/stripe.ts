@@ -9,11 +9,10 @@ import { STRIPE_CHECKOUT_TTL_SECONDS } from "./provider";
 import { stripeAllowedCountries } from "./stripeCountries.ts";
 
 /**
- * The delivery mode a chosen Stripe rate encodes. Session creation stamps every
- * rate's metadata with delivery: pickup|shipping; anything else (older sessions
- * created before that stamping, hand-made rates) is 'unknown' — which blocks
- * label purchase rather than being coalesced into a delivery order, because the
- * customer may have chosen pickup.
+ * Determines the delivery mode encoded in Stripe rate metadata.
+ *
+ * @param metadata - Stripe shipping-rate metadata containing the delivery mode
+ * @returns The encoded delivery mode, or `"unknown"` when it is absent or unrecognized
  */
 export function classifyRateDelivery(
   metadata: Record<string, string> | null | undefined,
@@ -37,9 +36,11 @@ type ShippingDetails = {
 } | null;
 
 /**
- * Stripe adapter for the PaymentProvider port. createFetchHttpClient() is
- * required on Workers (no Node HTTP), and webhook verification must use the
- * async (WebCrypto) path.
+ * Creates a payment provider backed by Stripe.
+ *
+ * @param secretKey - The Stripe secret API key
+ * @param webhookSecret - The secret used to verify Stripe webhook signatures
+ * @returns A Stripe-backed payment provider
  */
 export function createStripeProvider(secretKey: string, webhookSecret: string): PaymentProvider {
   const stripe = new Stripe(secretKey, {

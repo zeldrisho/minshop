@@ -8,10 +8,10 @@ import { createLnbitsBackend } from "./lnbits";
 export type { LightningBackend } from "./backend";
 
 /**
- * Returns the configured self-hosted Lightning node adapter (phoenixd | LNbits),
- * read from the admin config: the backend choice + node URL are D1 settings, the
- * key/password live in the encrypted vault. Throws a clear setup error if the chosen
- * backend isn't fully configured. Async because it reads D1.
+ * Creates the configured self-hosted Lightning backend adapter.
+ *
+ * @returns The configured LNbits or phoenixd backend adapter
+ * @throws Error if the selected backend is missing required configuration
  */
 export async function getLightningBackend(): Promise<LightningBackend> {
   const s = await getStoreSettings(env.DB);

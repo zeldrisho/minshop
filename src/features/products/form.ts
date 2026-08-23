@@ -14,11 +14,10 @@ export interface ProductFormOptions {
 }
 
 /**
- * Parse + validate the scalar product form fields. Prices arrive in major units
- * (e.g. dollars) and are stored as integer minor units, scaled by the product's
- * currency (×100 for USD, ×1 for JPY). Weight arrives in the store's display unit
- * and is stored as integer grams. The image upload is handled by the endpoint, not
- * here. Returns either the clean fields or a user-facing error.
+ * Parses and validates product form fields into normalized product data.
+ *
+ * @param options - Controls the weight display unit and whether active shippable products require a weight.
+ * @returns Normalized product fields, or a user-facing validation error.
  */
 export function parseProductForm(
   form: FormData,
@@ -78,6 +77,13 @@ export function parseProductForm(
   };
 }
 
+/**
+ * Creates a user-facing error message for an invalid weight value.
+ *
+ * @param reason - The validation failure that occurred
+ * @param unit - The unit used to enter the weight
+ * @returns An error message describing the weight validation failure
+ */
 function weightFieldError(
   reason: "not_number" | "negative" | "precision" | "over_limit",
   unit: WeightUnit,

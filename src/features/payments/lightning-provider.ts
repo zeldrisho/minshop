@@ -30,11 +30,10 @@ export interface MintLightningOrderInput {
 }
 
 /**
- * Mint a Lightning invoice for an order (subtotal + shipping → sats at spot) and
- * stash it as a pending payment. Shared by the no-shipping provider path
- * (createCheckout) and the own-checkout page (which adds shipping + address +
- * email). Returns the customer-facing /pay URL plus the raw invoice (so the
- * programmatic/agent path can pay it directly without the page).
+ * Creates a Lightning invoice for an order and records it as a pending payment.
+ *
+ * @param input - Order, pricing, customer, shipping, and reservation data used to create the invoice
+ * @returns The customer payment URL, BOLT11 invoice, amount in satoshis, payment hash, and expiration timestamp
  */
 export async function mintLightningOrder(
   db: D1Database,
@@ -96,12 +95,9 @@ export async function mintLightningOrder(
 }
 
 /**
- * Self-rendered Lightning checkout, implementing the outer PaymentProvider port
- * on top of a LightningBackend (phoenixd / LNbits). createCheckout here is the
- * NO-shipping path (digital goods etc.); when shipping is enabled the cart routes
- * through the own-checkout page (/checkout), which calls mintLightningOrder with
- * the collected address + shipping. Settlement is confirmed by re-polling the
- * node (the webhook is only a nudge). No refund — Lightning can't reverse.
+ * Creates a payment provider for Lightning checkout and payment verification.
+ *
+ * @returns A Lightning payment provider with checkout creation and webhook verification support.
  */
 export function createLightningProvider(
   db: D1Database,

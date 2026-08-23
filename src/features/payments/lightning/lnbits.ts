@@ -18,6 +18,13 @@ import { POLL_TIMEOUT_MS } from "./backend";
  */
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Creates an LNbits Lightning backend client.
+ *
+ * @param baseUrl - The LNbits server base URL
+ * @param apiKey - The API key used to authenticate requests
+ * @returns A Lightning backend configured to communicate with LNbits
+ */
 export function createLnbitsBackend(baseUrl: string, apiKey: string): LightningBackend {
   const base = baseUrl.replace(/\/+$/, "");
   const headers = { "X-Api-Key": apiKey, "content-type": "application/json" };

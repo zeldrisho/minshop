@@ -32,15 +32,32 @@ export const PUBLISHED_PAGE_LINKS_SQL = `SELECT title, slug FROM pages
    ORDER BY title COLLATE NOCASE, id
    LIMIT ${MAX_FOOTER_PAGE_LINKS}`;
 
+/**
+ * Retrieves a page by its database ID.
+ *
+ * @param id - The page's database ID
+ * @returns The matching page, or `null` if no page exists with that ID
+ */
 export async function getPage(db: D1Database, id: number): Promise<Page | null> {
   return db.prepare("SELECT * FROM pages WHERE id = ?").bind(id).first<Page>();
 }
 
-/** Page by its prefixed public ID (boundary resolution; null if missing). */
+/**
+ * Retrieves a page by its public ID.
+ *
+ * @param publicId - The prefixed public identifier of the page
+ * @returns The matching page, or `null` if no page is found
+ */
 export async function getPageByPublicId(db: D1Database, publicId: string): Promise<Page | null> {
   return db.prepare("SELECT * FROM pages WHERE public_id = ?").bind(publicId).first<Page>();
 }
 
+/**
+ * Retrieves a published page by its slug.
+ *
+ * @param slug - The page slug to search for
+ * @returns The matching published page, or `null` if no page matches
+ */
 export async function getPublishedPageBySlug(db: D1Database, slug: string): Promise<Page | null> {
   return db
     .prepare("SELECT * FROM pages WHERE slug = ? AND published = 1")
@@ -70,8 +87,9 @@ export async function listPublishedPages(db: D1Database): Promise<PageLink[]> {
 }
 
 /**
- * Published pages as {id, title} for admin pickers. Ids rather than slugs
- * because a setting that points at a page must survive it being renamed.
+ * Lists published pages for administrative selectors.
+ *
+ * @returns Published page IDs, public IDs, and titles ordered by title and ID
  */
 export async function listPublishedPageOptions(
   db: D1Database,
@@ -84,7 +102,14 @@ export async function listPublishedPageOptions(
   return results ?? [];
 }
 
-/** New pages start unpublished: media can only be attached once an id exists. */
+/**
+ * Creates an unpublished page draft.
+ *
+ * @param title - The page title
+ * @param slug - The page slug
+ * @returns The database ID of the created page
+ * @throws If the page insert does not return a row
+ */
 export async function createDraft(db: D1Database, title: string, slug: string): Promise<number> {
   return withPublicId("page", async (publicId) => {
     const row = await db
@@ -98,6 +123,12 @@ export async function createDraft(db: D1Database, title: string, slug: string): 
   });
 }
 
+/**
+ * Updates a page's content, publication state, layout, and modification timestamp.
+ *
+ * @param id - The database ID of the page to update
+ * @param fields - The page fields to save
+ */
 export async function updatePage(
   db: D1Database,
   id: number,

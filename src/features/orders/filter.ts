@@ -50,6 +50,12 @@ export const ORDER_METHOD_OPTIONS: { value: string; label: string }[] = [
 const isStatus = (v: string | null): v is OrderStatusFilter =>
   v !== null && Object.prototype.hasOwnProperty.call(STATUS, v);
 
+/**
+ * Parses URL parameters into validated order filters.
+ *
+ * @param params - The URL parameters containing order filter values
+ * @returns The parsed order filters, with unsupported values set to `null`
+ */
 export function parseOrderFilters(params: URLSearchParams): OrderFilters {
   const status = params.get("status");
   const fulfillment = params.get("fulfillment");
@@ -67,7 +73,12 @@ export function hasOrderFilters(f: OrderFilters): boolean {
   return f.status !== null || f.fulfillment !== null || f.method !== null || f.review;
 }
 
-/** The filters as query params, for building sort/pagination links that keep them. */
+/**
+ * Converts order filters into query parameters for links that preserve the active filters.
+ *
+ * @param f - The order filters to serialize
+ * @returns Query parameters containing active filter values
+ */
 export function orderFilterParams(f: OrderFilters): Record<string, string | undefined> {
   return {
     status: f.status ?? undefined,
@@ -78,8 +89,10 @@ export function orderFilterParams(f: OrderFilters): Record<string, string | unde
 }
 
 /**
- * `WHERE …` (or an empty string) plus its bound values. Pass the same result to
- * both the list and the count.
+ * Builds the SQL filtering clause and bound values for order filters.
+ *
+ * @param f - The status, fulfillment, payment method, and refund-review filters to apply
+ * @returns The `WHERE` clause and its bound parameter values
  */
 export function orderFilterClause(f: OrderFilters): { where: string; params: string[] } {
   const parts: string[] = [];

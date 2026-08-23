@@ -88,6 +88,11 @@ export interface InventoryException {
   resolved_at: string | null;
 }
 
+/**
+ * Counts inventory exceptions that have not been resolved.
+ *
+ * @returns The number of unresolved inventory exceptions.
+ */
 export async function countUnresolvedInventoryExceptions(db: D1Database): Promise<number> {
   const row = await db
     .prepare("SELECT COUNT(*) AS n FROM order_inventory_exceptions WHERE resolved_at IS NULL")
@@ -194,7 +199,15 @@ export interface OrderFilter {
 }
 const EMPTY_FILTER: OrderFilter = { where: "", params: [] };
 
-/** Recent orders for the admin view, newest first. */
+/**
+ * Lists orders for the admin view with optional filtering, ordering, and pagination.
+ *
+ * @param limit - Maximum number of orders to include
+ * @param orderBy - Ordering expression for the results
+ * @param offset - Number of matching orders to skip
+ * @param filter - Conditions used to filter the orders
+ * @returns The matching orders
+ */
 export async function listOrders(
   db: D1Database,
   limit = 50,
@@ -301,7 +314,12 @@ export async function orderStats(
   };
 }
 
-/** Single order by id, or null if missing. */
+/**
+ * Retrieves an order by its numeric ID.
+ *
+ * @param id - The order's numeric ID
+ * @returns The matching order, or `null` if no order exists with that ID
+ */
 export async function getOrder(db: D1Database, id: number): Promise<Order | null> {
   return db.prepare("SELECT * FROM orders WHERE id = ?").bind(id).first<Order>();
 }
@@ -317,8 +335,10 @@ export async function getOrderByPublicId(db: D1Database, publicId: string): Prom
 }
 
 /**
- * Resolve a legacy calculated order number to its order public ID through
- * order_reference_aliases (admin/support lookup; see the public-ID plan).
+ * Resolves a legacy order reference to its public order ID.
+ *
+ * @param reference - The legacy order reference to look up
+ * @returns The matching order public ID, or `null` when no match exists
  */
 export async function findOrderPublicIdByReference(
   db: D1Database,
@@ -331,7 +351,12 @@ export async function findOrderPublicIdByReference(
   return row?.order_public_id ?? null;
 }
 
-/** Find an already-settled order by the provider's idempotency/session id. */
+/**
+ * Finds an order settled for a provider session.
+ *
+ * @param providerSessionId - The provider's idempotency or session identifier
+ * @returns The matching order, or `null` when no order is associated with the session
+ */
 export async function getOrderByProviderSessionId(
   db: D1Database,
   providerSessionId: string,
@@ -371,11 +396,21 @@ export async function fulfillOrder(
 }
 
 /** Revert an order to unfulfilled, clearing tracking. */
-/** Attach a purchased label's document URL (fulfillOrder records the tracking). */
+/**
+ * Stores the document URL for a purchased shipping label.
+ *
+ * @param id - The numeric order ID
+ * @param url - The shipping label document URL
+ */
 export async function setOrderLabelUrl(db: D1Database, id: number, url: string): Promise<void> {
   await db.prepare("UPDATE orders SET label_url = ? WHERE id = ?").bind(url, id).run();
 }
 
+/**
+ * Marks an order as unfulfilled and clears its tracking information.
+ *
+ * @param id - The numeric order ID
+ */
 export async function unfulfillOrder(db: D1Database, id: number): Promise<void> {
   await db
     .prepare(
@@ -421,22 +456,16 @@ export async function listOrderItemsWithImages(
 }
 
 /**
- * Record a paid order and write its line items. New real checkouts atomically
- * reserve stock before leaving the store, so settlement consumes that reservation
- * without decrementing twice. Legacy/unreserved orders retain the old settlement
- * decrement path for rolling-deploy compatibility.
+ * Atomically records a paid order, its items, inventory changes, and notification intents.
  *
- * Idempotent on the provider session id (column is `provider_session_id` for
- * historical reasons; holds whichever provider's session id). A unique settlement
- * token claims the order inside the SAME D1 batch that inserts the header + items
- * and decrements stock. Parallel/re-delivered webhooks therefore cannot both apply
- * inventory, and any batch failure rolls the entire order back for a clean retry.
- * The return value is the claimed order id, or null when another delivery already
- * completed it; callers use that to send confirmation email once after commit.
+ * Existing reservations are settled without decrementing inventory again. Orders without
+ * usable reservations decrement available stock and record any resulting shortfalls. Repeated
+ * or concurrent deliveries for the same provider session are ignored after the first
+ * successful settlement.
  *
- * Demo follows the same reservation lifecycle as other new checkouts. This keeps
- * its end-to-end exercise realistic while the reservation guard prevents a
- * settlement from decrementing inventory twice.
+ * @param o - Paid-order data, including the provider session, items, payment details, and optional reservation
+ * @param stockPurger - Optional callback invoked with affected product public IDs after visible stock changes
+ * @returns The settled order ID, or `null` when another delivery already settled the provider session
  */
 export async function recordPaidOrder(
   db: D1Database,
