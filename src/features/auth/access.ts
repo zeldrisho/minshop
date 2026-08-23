@@ -26,8 +26,8 @@ export function clearAccessCache(): void {
 }
 
 function b64urlToBytes(s: string): Uint8Array<ArrayBuffer> {
-  const pad = s.length % 4 === 0 ? '' : '='.repeat(4 - (s.length % 4));
-  const bin = atob(s.replace(/-/g, '+').replace(/_/g, '/') + pad);
+  const pad = s.length % 4 === 0 ? "" : "=".repeat(4 - (s.length % 4));
+  const bin = atob(s.replace(/-/g, "+").replace(/_/g, "/") + pad);
   const out = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
   return out;
@@ -38,7 +38,7 @@ function decodeSegment<T>(seg: string): T {
 }
 
 async function fetchKeys(teamDomain: string, force: boolean): Promise<Jwk[]> {
-  const base = teamDomain.replace(/\/$/, '');
+  const base = teamDomain.replace(/\/$/, "");
   const cached = jwksCache.get(base);
   if (!force && cached && Date.now() - cached.fetchedAt < JWKS_TTL_MS) return cached.keys;
   const res = await fetch(`${base}/cdn-cgi/access/certs`);
@@ -51,11 +51,11 @@ async function fetchKeys(teamDomain: string, force: boolean): Promise<Jwk[]> {
 
 async function importVerifyKey(jwk: Jwk): Promise<CryptoKey> {
   return crypto.subtle.importKey(
-    'jwk',
-    { kty: jwk.kty, n: jwk.n, e: jwk.e, alg: 'RS256', ext: true },
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    "jwk",
+    { kty: jwk.kty, n: jwk.n, e: jwk.e, alg: "RS256", ext: true },
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
     false,
-    ['verify'],
+    ["verify"],
   );
 }
 
@@ -87,7 +87,7 @@ export async function verifyAccessJwt(
   token: string,
   opts: { teamDomain: string; aud: string },
 ): Promise<AccessIdentity | null> {
-  const parts = token.split('.');
+  const parts = token.split(".");
   if (parts.length !== 3) return null;
   const [h, p, s] = parts;
 
@@ -99,16 +99,16 @@ export async function verifyAccessJwt(
   } catch {
     return null; // not valid base64url JSON
   }
-  if (header.alg !== 'RS256' || !header.kid) return null;
+  if (header.alg !== "RS256" || !header.kid) return null;
 
   // Cheap claim checks before any crypto.
-  const base = opts.teamDomain.replace(/\/$/, '');
+  const base = opts.teamDomain.replace(/\/$/, "");
   if (payload.iss !== base && payload.iss !== `${base}/`) return null;
   const auds = Array.isArray(payload.aud) ? payload.aud : payload.aud ? [payload.aud] : [];
   if (!auds.includes(opts.aud)) return null;
   const now = Math.floor(Date.now() / 1000);
-  if (typeof payload.exp === 'number' && now >= payload.exp) return null;
-  if (typeof payload.nbf === 'number' && now < payload.nbf) return null;
+  if (typeof payload.exp === "number" && now >= payload.exp) return null;
+  if (typeof payload.nbf === "number" && now < payload.nbf) return null;
 
   const signed = new TextEncoder().encode(`${h}.${p}`);
   const sig = b64urlToBytes(s);
@@ -116,7 +116,7 @@ export async function verifyAccessJwt(
     const jwk = keys.find((k) => k.kid === header.kid);
     if (!jwk) return false;
     const key = await importVerifyKey(jwk);
-    return crypto.subtle.verify({ name: 'RSASSA-PKCS1-v1_5' }, key, sig, signed);
+    return crypto.subtle.verify({ name: "RSASSA-PKCS1-v1_5" }, key, sig, signed);
   };
 
   let keys = await fetchKeys(opts.teamDomain, false);
@@ -124,5 +124,5 @@ export async function verifyAccessJwt(
   if (!keys.some((k) => k.kid === header.kid)) keys = await fetchKeys(opts.teamDomain, true);
   if (!(await verifyWith(keys))) return null;
 
-  return { email: payload.email ?? '', sub: payload.sub };
+  return { email: payload.email ?? "", sub: payload.sub };
 }

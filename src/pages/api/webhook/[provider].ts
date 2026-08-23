@@ -1,16 +1,16 @@
-import type { APIRoute } from 'astro';
-import { env } from 'cloudflare:workers';
+import type { APIRoute } from "astro";
+import { env } from "cloudflare:workers";
 import {
   getPaymentProvider,
   isMethodAvailable,
   type PaymentMethod,
-} from '../../../features/payments';
-import { getStoreSettings } from '../../../features/settings/db';
-import { recordPaidWebhookOrder } from '../../../features/orders/recordWebhook';
+} from "../../../features/payments";
+import { getStoreSettings } from "../../../features/settings/db";
+import { recordPaidWebhookOrder } from "../../../features/orders/recordWebhook";
 
 export const prerender = false;
 
-const METHODS: PaymentMethod[] = ['stripe', 'lightning', 'opennode'];
+const METHODS: PaymentMethod[] = ["stripe", "lightning", "opennode"];
 
 // Per-provider webhook: POST /api/webhook/<method>. Lets multiple rails run at
 // once — each posts to its OWN path, because a single endpoint can only verify
@@ -20,7 +20,7 @@ export const POST: APIRoute = async ({ request, params }) => {
   const method = params.provider as PaymentMethod;
   const settings = await getStoreSettings(env.DB);
   if (!METHODS.includes(method) || !isMethodAvailable(method, settings)) {
-    return new Response('Unknown or unconfigured payment method', { status: 404 });
+    return new Response("Unknown or unconfigured payment method", { status: 404 });
   }
 
   const payload = await request.text();
@@ -35,5 +35,5 @@ export const POST: APIRoute = async ({ request, params }) => {
   }
 
   await recordPaidWebhookOrder(result, origin, method, settings);
-  return new Response('ok', { status: 200 });
+  return new Response("ok", { status: 200 });
 };

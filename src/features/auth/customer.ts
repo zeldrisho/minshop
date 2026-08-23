@@ -1,10 +1,10 @@
-import { env } from 'cloudflare:workers';
-import type { AstroCookies } from 'astro';
-import { getConfig } from '../../config';
-import { getSetting } from '../settings/db';
-import { getEmailProvider } from '../email';
-import { loginLinkEmail } from '../email/loginLink';
-import { signToken, verifyToken } from './token';
+import { env } from "cloudflare:workers";
+import type { AstroCookies } from "astro";
+import { getConfig } from "../../config";
+import { getSetting } from "../settings/db";
+import { getEmailProvider } from "../email";
+import { loginLinkEmail } from "../email/loginLink";
+import { signToken, verifyToken } from "./token";
 
 /**
  * Passwordless customer auth (magic-link). Default adapter for the storefront
@@ -15,7 +15,7 @@ import { signToken, verifyToken } from './token';
  */
 const MAGIC_TTL = 15 * 60; // login link valid 15 min
 const SESSION_TTL = 30 * 24 * 3600; // session cookie valid 30 days
-const COOKIE = 'customer_session';
+const COOKIE = "customer_session";
 
 const now = () => Date.now() / 1000;
 const normalize = (email: string) => email.trim().toLowerCase();
@@ -26,8 +26,8 @@ const normalize = (email: string) => email.trim().toLowerCase();
  * falling back to the build-time `features.accounts` default when unset.
  */
 export async function accountsEnabled(): Promise<boolean> {
-  const override = await getSetting(env.DB, 'accounts_enabled');
-  const on = override == null ? getConfig().features.accounts : override === '1';
+  const override = await getSetting(env.DB, "accounts_enabled");
+  const on = override == null ? getConfig().features.accounts : override === "1";
   if (!on || !env.AUTH_SECRET) return false;
   return (await getEmailProvider()) !== null;
 }
@@ -54,10 +54,10 @@ export async function requestLogin(email: string, origin: string): Promise<void>
   const emailer = await getEmailProvider();
   if (emailer) {
     try {
-      const storeName = (await getSetting(env.DB, 'store_name')) || getConfig().storeName;
+      const storeName = (await getSetting(env.DB, "store_name")) || getConfig().storeName;
       await emailer.send(loginLinkEmail(addr, link, storeName));
     } catch (err) {
-      console.error('Login email failed:', err);
+      console.error("Login email failed:", err);
     }
   }
 }
@@ -81,14 +81,14 @@ export async function setCustomerSession(
   cookies.set(COOKIE, token, {
     httpOnly: true,
     secure,
-    sameSite: 'lax',
-    path: '/',
+    sameSite: "lax",
+    path: "/",
     maxAge: SESSION_TTL,
   });
 }
 
 export function clearCustomerSession(cookies: AstroCookies): void {
-  cookies.delete(COOKIE, { path: '/' });
+  cookies.delete(COOKIE, { path: "/" });
 }
 
 /** The logged-in customer's email (verified session cookie), or null. */

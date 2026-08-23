@@ -1,16 +1,12 @@
-import { env } from 'cloudflare:workers';
-import {
-  markPendingSettled,
-  pendingToPaidOrder,
-  type PendingPayment,
-} from '../lightning/pending';
-import { getLightningBackend } from '../lightning';
-import { getOrderByProviderSessionId, recordPaidOrder } from '../../orders/db';
-import { recordPaidWebhookOrder } from '../../orders/recordWebhook';
-import { resolveRequiredOrderEmail } from '../../email/orderPolicy';
-import { deliverOrderNotifications } from '../../email/outbox';
-import type { StoreSettings } from '../../settings/db';
-import { purgeStockProductCache } from '../../cache/purge';
+import { env } from "cloudflare:workers";
+import { markPendingSettled, pendingToPaidOrder, type PendingPayment } from "../lightning/pending";
+import { getLightningBackend } from "../lightning";
+import { getOrderByProviderSessionId, recordPaidOrder } from "../../orders/db";
+import { recordPaidWebhookOrder } from "../../orders/recordWebhook";
+import { resolveRequiredOrderEmail } from "../../email/orderPolicy";
+import { deliverOrderNotifications } from "../../email/outbox";
+import type { StoreSettings } from "../../settings/db";
+import { purgeStockProductCache } from "../../cache/purge";
 
 // Settlement logic for the self-rendered /pay page, one function per method. Kept
 // here (beside the views) so the route stays a thin dispatcher.
@@ -23,8 +19,8 @@ export interface DemoSettleResult {
 }
 
 const DECLINE: Record<string, string> = {
-  insufficient: 'Payment declined — insufficient funds. (Simulated)',
-  decline: 'Payment declined — your card was declined. (Simulated)',
+  insufficient: "Payment declined — insufficient funds. (Simulated)",
+  decline: "Payment declined — your card was declined. (Simulated)",
 };
 
 /**
@@ -42,17 +38,17 @@ export async function settleDemoCheckout(
 ): Promise<DemoSettleResult> {
   // Fail closed after the demo window even if a POST slips past the page guard.
   if (pending.expires_at != null && Date.parse(pending.expires_at) <= Date.now()) {
-    return { declined: 'This demo checkout has expired.' };
+    return { declined: "This demo checkout has expired." };
   }
-  const outcome = String(form.get('outcome') ?? 'approve');
-  const email = resolveRequiredOrderEmail(String(form.get('email') ?? ''), pending.email);
-  if (!email) return { declined: 'A valid email is required.' };
-  if (outcome === 'approve') {
+  const outcome = String(form.get("outcome") ?? "approve");
+  const email = resolveRequiredOrderEmail(String(form.get("email") ?? ""), pending.email);
+  if (!email) return { declined: "A valid email is required." };
+  if (outcome === "approve") {
     const order = { ...pendingToPaidOrder(pending), email };
     // pendingToPaidOrder carries settlePaymentHash, so the pending row settles
     // inside the order batch — no separate markPendingSettled round trip. With
     // waitUntil the emails (and their reads) run after the redirect is sent.
-    await recordPaidWebhookOrder({ type: 'demo.paid', order }, origin, 'demo', settings, waitUntil);
+    await recordPaidWebhookOrder({ type: "demo.paid", order }, origin, "demo", settings, waitUntil);
     return { settled: true };
   }
   return { declined: DECLINE[outcome] ?? DECLINE.decline };
@@ -95,7 +91,8 @@ export async function settleLightningOnLoad(
   // it doesn't dispatch the outbox rows nothing else reliably will (the sweep
   // needs a later sale). Backgrounded when the page has an execution context.
   const deliver = () => deliverOrderNotifications(env.DB, settledOrderId!, origin, settings);
-  if (waitUntil) waitUntil(deliver().catch((err) => console.error('Notification delivery failed:', err)));
+  if (waitUntil)
+    waitUntil(deliver().catch((err) => console.error("Notification delivery failed:", err)));
   else await deliver();
   return true;
 }

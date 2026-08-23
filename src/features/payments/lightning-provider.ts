@@ -1,19 +1,15 @@
-import type { D1Database } from '@cloudflare/workers-types';
+import type { D1Database } from "@cloudflare/workers-types";
 import type {
   PaymentProvider,
   CreateCheckoutParams,
   CheckoutResult,
   WebhookResult,
-} from './provider';
-import type { ShippingAddress } from '../orders/db';
-import type { LightningBackend } from './lightning/backend';
-import { getBtcRate, fiatCentsToSats } from './lightning/rate';
-import {
-  createPendingPayment,
-  getPendingByHash,
-  pendingToPaidOrder,
-} from './lightning/pending';
-import { getConfig } from '../../config';
+} from "./provider";
+import type { ShippingAddress } from "../orders/db";
+import type { LightningBackend } from "./lightning/backend";
+import { getBtcRate, fiatCentsToSats } from "./lightning/rate";
+import { createPendingPayment, getPendingByHash, pendingToPaidOrder } from "./lightning/pending";
+import { getConfig } from "../../config";
 
 export interface MintLightningOrderInput {
   origin: string;
@@ -25,7 +21,7 @@ export interface MintLightningOrderInput {
   shippingCents?: number;
   shippingLabel?: string | null;
   shippingWeightGrams?: number | null;
-  deliveryMethod?: 'pickup' | 'shipping' | null;
+  deliveryMethod?: "pickup" | "shipping" | null;
   /** Pre-serialized JSON cart snapshot: [{ id, q, n, p }]. */
   itemsJson?: string | null;
   email?: string | null;
@@ -44,7 +40,13 @@ export async function mintLightningOrder(
   db: D1Database,
   backend: LightningBackend,
   input: MintLightningOrderInput,
-): Promise<{ payUrl: string; bolt11: string; amountSat: number; paymentHash: string; expiresAt: string }> {
+): Promise<{
+  payUrl: string;
+  bolt11: string;
+  amountSat: number;
+  paymentHash: string;
+  expiresAt: string;
+}> {
   const cfg = getConfig();
   const ln = cfg.payments.lightning;
   const shippingCents = input.shippingCents ?? 0;
@@ -137,12 +139,12 @@ export function createLightningProvider(
       const evt = await backend.verifyWebhook(payload, headers);
       // The webhook is an untrusted nudge — re-poll the node for the truth.
       const status = await backend.getIncoming(evt.paymentHash);
-      if (!status.paid) return { type: 'lightning.unconfirmed' };
+      if (!status.paid) return { type: "lightning.unconfirmed" };
 
       const pending = await getPendingByHash(db, evt.paymentHash);
-      if (!pending) return { type: 'lightning.unknown' };
+      if (!pending) return { type: "lightning.unknown" };
       return {
-        type: 'lightning.paid',
+        type: "lightning.paid",
         settlePendingPaymentId: evt.paymentHash,
         order: pendingToPaidOrder(pending),
       };

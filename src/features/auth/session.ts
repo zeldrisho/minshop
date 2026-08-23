@@ -13,18 +13,18 @@
  * App-password stopgap's session layer; Cloudflare Access remains the recommended
  * production auth and is unaffected.
  */
-const PREFIX = 'v1';
+const PREFIX = "v1";
 
 async function hmacHex(key: string, message: string): Promise<string> {
   const k = await crypto.subtle.importKey(
-    'raw',
+    "raw",
     new TextEncoder().encode(key),
-    { name: 'HMAC', hash: 'SHA-256' },
+    { name: "HMAC", hash: "SHA-256" },
     false,
-    ['sign'],
+    ["sign"],
   );
-  const sig = await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(message));
-  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  const sig = await crypto.subtle.sign("HMAC", k, new TextEncoder().encode(message));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 /** Constant-time string compare — avoids leaking via timing (password + signature). */
@@ -61,7 +61,7 @@ export async function verifySession(
   nowSeconds: number,
 ): Promise<boolean> {
   if (!token) return false;
-  const parts = token.split('.');
+  const parts = token.split(".");
   if (parts.length !== 4) return false;
   const [prefix, expStr, tag, sig] = parts;
   if (prefix !== PREFIX) return false;
