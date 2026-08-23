@@ -25,7 +25,7 @@
  * reported error names the whole chain, because "this control is binding-aware"
  * is not actionable without knowing which hop introduced it.
  *
- * Usage: node scripts/check-themes.mjs [dir...]
+ * Usage: node scripts/theme/check-themes.mjs [dir...]
  */
 import { readdir, readFile, stat } from "node:fs/promises";
 import { dirname, join, normalize, relative } from "node:path";

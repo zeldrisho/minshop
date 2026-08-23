@@ -2,7 +2,7 @@ import type { Product } from "../products/db";
 import { productImageSources, type ImageDelivery } from "../products/image";
 import { requirePublicId } from "../catalog/serialize";
 import { stockState } from "../products/stock";
-import { formatMoney } from "../../money";
+import { formatMoney } from "../../lib/money";
 import type { ProductCardModel, StorefrontImage } from "./models";
 
 /**

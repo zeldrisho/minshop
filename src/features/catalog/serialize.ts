@@ -1,7 +1,7 @@
 import type { Product } from "../products/db";
 import type { ProductVariant, ProductExtra } from "../products/variants";
 import { productImageUrl } from "../products/image";
-import { toMajorUnits } from "../../money";
+import { toMajorUnits } from "../../lib/money";
 
 /** A purchasable variant in catalog form (price in both major + minor units). */
 export interface CatalogVariant {

@@ -8,7 +8,7 @@
 # migration history are untouched (no re-migrate needed). Re-seed demo data with
 # --seed.
 #
-#   Usage:  scripts/reset.sh [--remote] [--seed] [--yes]
+#   Usage:  scripts/db/reset.sh [--remote] [--seed] [--yes]
 #   --remote: target the DEPLOYED D1 (default: the local .wrangler/state store).
 #   --seed:   load ./db/seeds/seed.sql after clearing.
 #   --yes:    skip the confirmation prompt.

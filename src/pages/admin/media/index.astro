@@ -6,7 +6,7 @@ import { MEDIA_PAGE_SIZE, countMedia } from '../../../features/media/db';
 import { isUnused, usageLinks } from '../../../features/media/usage';
 import { mediaUrl } from '../../../features/media/url';
 import { loadMediaPage } from '../../api/admin/media';
-import { paginate, queryHref } from '../../../pagination';
+import { paginate, queryHref } from '../../../lib/pagination';
 
 const error = Astro.url.searchParams.get('error');
 

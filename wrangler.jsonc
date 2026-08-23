@@ -11,7 +11,7 @@
   // and adds `scheduled` for the cron below; the adapter still builds the app.
   // No `assets` here: @astrojs/cloudflare supplies that itself.
   //
-  // Per-instance CLI deploys use scripts/provision-cf.sh, which renders an instance
+  // Per-instance CLI deploys use scripts/db/provision-cf.sh, which renders an instance
   // config from wrangler.template.jsonc (real ids) and restores this file after.
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "minshop",
@@ -35,7 +35,7 @@
   // enable Workers Caching only after it declares CANONICAL_ORIGIN and disables
   // alternate ingress hostnames. cross_version_cache stays off unless the
   // deploy environment has the same CACHE_PURGE_SECRET as the Worker:
-  // scripts/deploy.mjs uses it to sign the mandatory post-deploy purge.
+  // scripts/deploy/deploy.mjs uses it to sign the mandatory post-deploy purge.
   "cache": {
     "enabled": false,
   },

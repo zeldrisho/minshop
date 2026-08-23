@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# Tear down an instance created by scripts/provision-cf.sh: deletes the Worker, its
+# Tear down an instance created by scripts/db/provision-cf.sh: deletes the Worker, its
 # Vectorize index, both R2 buckets, D1 database, and the auto-provisioned sessions KV.
 #
-#   Usage:  scripts/destroy-cf.sh <slug>
+#   Usage:  scripts/db/destroy-cf.sh <slug>
 #
 # ⚠  IRREVERSIBLE — permanently deletes that instance's data (orders, products,
 #    images). Deleting the Worker also removes its secrets. Some wrangler commands
@@ -11,7 +11,7 @@
 set -euo pipefail
 
 SLUG="${1:-}"
-[[ -n "$SLUG" ]] || { echo "usage: scripts/destroy-cf.sh <slug>" >&2; exit 1; }
+[[ -n "$SLUG" ]] || { echo "usage: scripts/db/destroy-cf.sh <slug>" >&2; exit 1; }
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"

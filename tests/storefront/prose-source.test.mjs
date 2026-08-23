@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 // equivalence gate passes whether the rules read a token, read the wrong token,
 // or lost their fallback.
 
-import { discoverThemeIds, THEMES_DIR } from "../../scripts/themes.mjs";
+import { discoverThemeIds, THEMES_DIR } from "../../scripts/theme/themes.mjs";
 
 const global = readFileSync("src/styles/global.css", "utf8");
 // Structural rules moved to base.css so the Admin entry can share them without

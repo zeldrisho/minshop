@@ -9,7 +9,7 @@ import {
   normalizeThemeId,
   resolveTheme,
   themePath,
-} from "../../scripts/themes.mjs";
+} from "../../scripts/theme/themes.mjs";
 
 // .mjs: reads the filesystem, and tsconfig.compilerOptions.types is pinned to
 // the Cloudflare types. Same reason as boundary.test.mjs.
@@ -19,7 +19,10 @@ function fixture(ids, config) {
   const root = mkdtempSync(join(tmpdir(), "theme-resolver-"));
   roots.push(root);
   for (const id of ids) mkdirSync(join(root, "src/themes", id), { recursive: true });
-  if (config !== undefined) writeFileSync(join(root, "theme.config.json"), config);
+  if (config !== undefined) {
+    mkdirSync(join(root, "config"), { recursive: true });
+    writeFileSync(join(root, "config/theme.config.json"), config);
+  }
   return root;
 }
 
@@ -131,7 +134,7 @@ describe("resolveTheme", () => {
     // and deploy the upstream design in place of its own.
     const root = fixture(["default", "acme"]);
 
-    expect(() => resolveTheme(root)).toThrow(/Missing theme\.config\.json/);
+    expect(() => resolveTheme(root)).toThrow(/Missing config\/theme\.config\.json/);
   });
 
   it.each([

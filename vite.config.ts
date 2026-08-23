@@ -17,7 +17,7 @@ export default defineConfig({
       ".pi/**",
       ".roo/**",
       ".windsurf/**",
-      "tools/oxlint/anti-slop/**",
+      "config/tools/oxlint/anti-slop/**",
     ],
   },
   lint: {
@@ -33,12 +33,12 @@ export default defineConfig({
       ".pi/**",
       ".roo/**",
       ".windsurf/**",
-      "tools/oxlint/anti-slop/**",
+      "config/tools/oxlint/anti-slop/**",
       "mcp/**",
     ],
     jsPlugins: [
       { name: "vite-plus", specifier: "vite-plus/oxlint-plugin" },
-      { name: "anti-slop", specifier: "./tools/oxlint/anti-slop/index.ts" },
+      { name: "anti-slop", specifier: "./config/tools/oxlint/anti-slop/index.ts" },
     ],
     rules: {
       "vite-plus/prefer-vite-plus-imports": "error",

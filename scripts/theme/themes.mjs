@@ -13,7 +13,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 export const THEMES_DIR = "src/themes";
-export const CONFIG_FILE = "theme.config.json";
+export const CONFIG_FILE = "config/theme.config.json";
 
 /** Ids upstream owns. A store may not claim one, or a later upstream release
  *  would have nowhere to put the theme the name was held for. `studio` and
