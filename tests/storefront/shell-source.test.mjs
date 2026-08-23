@@ -59,7 +59,13 @@ describe("the document shell", () => {
   it("keeps the drawer outside the store-owned header", () => {
     // A fixed dialog nested inside the sticky, backdrop-filtered header would
     // take the header as its containing block and mis-position.
-    expect(markup.indexOf("data-cart-drawer")).toBeGreaterThan(markup.indexOf("<StoreFooter"));
+    const footer = markup.indexOf("<StoreFooter");
+    const drawer = markup.indexOf("data-cart-drawer");
+
+    // Assert presence first: a missing token yields -1, which would make the
+    // ordering below pass vacuously and lose the placement guarantee silently.
+    expect(footer).toBeGreaterThanOrEqual(0);
+    expect(drawer).toBeGreaterThan(footer);
   });
 
   it("reads the count the cart partial writes", () => {

@@ -88,7 +88,7 @@ describe("the content-page prose scale", () => {
     // They are consumed directly by core CSS and define no Tailwind utility
     // namespace; inside @theme they would imply a utility-token role.
     const css = readFileSync(`${THEMES_DIR}/${id}/tokens.css`, "utf8");
-    const block = css.slice(css.indexOf("@theme"), css.indexOf("}", css.indexOf("@theme")));
+    const block = themeBlockDeclarations(css);
 
     expect(block).not.toContain("--prose-");
     expect(css).toContain(":root {");

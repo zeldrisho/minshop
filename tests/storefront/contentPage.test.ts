@@ -24,8 +24,9 @@ describe("the store-owned content page", () => {
     // double-escape a merchant's page or move the trusted-HTML boundary.
     const html = await render(ContentPage, model());
 
-    expect(html).toContain("<h2>Our story</h2>");
-    expect(html).toContain('<a href="/products">link</a>');
+    // The whole body, not just fragments — a renderer could preserve two
+    // snippets while escaping, reordering, or dropping everything between.
+    expect(html).toContain(model().html);
   });
 
   it("keeps the hook the prose styles are scoped to", async () => {

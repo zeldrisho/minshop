@@ -199,7 +199,6 @@ describe("the store-owned header", () => {
     // always-visible field satisfies the same contract through the form action
     // alone. Asserting the link would have pinned the default's composition.
     expect(html).toMatch(/(href|action)="\/search"/);
-    {}
   });
 
   it("gives every navigation landmark a non-empty accessible name", async () => {

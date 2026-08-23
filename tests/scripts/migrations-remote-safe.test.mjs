@@ -22,6 +22,22 @@ import { readdirSync, readFileSync } from "node:fs";
 
 const MIGRATIONS = new URL("../../migrations/", import.meta.url);
 
+// A trigger spans from CREATE TRIGGER to its final column-zero END;. Finding
+// the FIRST such marker instead of the last would let an inner `CASE … END`
+// closed at column zero masquerade as the terminus — exactly the shape wrangler
+// truncates on — so the close is always the LAST marker in the trigger's
+// region, and everything between BEGIN and it is held to the no-END rule.
+function triggerBodies(sql) {
+  const starts = [...sql.matchAll(/CREATE TRIGGER/gi)];
+  return starts.map((start, i) => {
+    const region = sql.slice(start.index, i + 1 < starts.length ? starts[i + 1].index : undefined);
+    const closes = [...region.matchAll(/\nEND;/gi)];
+    if (closes.length === 0) return null;
+    const finalClose = closes[closes.length - 1];
+    return region.slice(0, finalClose.index).replace(/^[\s\S]*?\bBEGIN\b/i, "");
+  });
+}
+
 describe("migrations survive wrangler --remote", () => {
   const files = readdirSync(MIGRATIONS).filter((name) => name.endsWith(".sql"));
 
@@ -36,10 +52,8 @@ describe("migrations survive wrangler --remote", () => {
   // passed a migration that failed against the live database.
   it.each(files)("%s has no early trigger close, in SQL or comments", (name) => {
     const sql = readFileSync(new URL(name, MIGRATIONS), "utf8");
-    const triggers = sql.match(/CREATE TRIGGER[\s\S]*?\nEND;/gi) ?? [];
-    for (const trigger of triggers) {
-      // The body is everything between the opening BEGIN and the final END;.
-      const body = trigger.replace(/^[\s\S]*?\bBEGIN\b/i, "").replace(/\nEND;$/i, "");
+    for (const body of triggerBodies(sql)) {
+      if (body === null) continue;
       expect(
         body,
         `${name}: a trigger body closes early — wrangler's remote migration ` +
@@ -47,5 +61,18 @@ describe("migrations survive wrangler --remote", () => {
           "instead of CASE, and keep explanatory comments outside the body.",
       ).not.toMatch(/\bEND\s*;/i);
     }
+  });
+
+  it("detects an inner END; closed at column zero", () => {
+    // Regression guard for the extraction above: a CASE closed at column zero
+    // must be seen as body content, not swallowed as the trigger's terminus.
+    const broken = [
+      "CREATE TRIGGER t BEFORE INSERT ON items BEGIN",
+      "SELECT CASE WHEN NEW.qty < 0 THEN RAISE(ABORT, 'negative')",
+      "END;",
+      "UPDATE items SET ok = 1;",
+      "END;",
+    ].join("\n");
+    expect(triggerBodies(broken)[0]).toMatch(/\bEND\s*;/i);
   });
 });
