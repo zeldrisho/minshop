@@ -1,38 +1,27 @@
-import { env } from 'cloudflare:workers';
-import type { WebhookResult } from '../payments/provider';
-import { recordPaidOrder, getOrderByProviderSessionId } from './db';
-import { deliverOrderNotifications, sweepStaleNotifications } from '../email/outbox';
-import { persistRefundEvent, applyRefundEvent } from '../refunds/sync';
-import { sendRefundNotice } from '../refunds/notify';
-import { getPaymentProvider, type PaymentMethod } from '../payments';
-import type { StoreSettings } from '../settings/db';
+import { env } from "cloudflare:workers";
+import type { WebhookResult } from "../payments/provider";
+import { recordPaidOrder, getOrderByProviderSessionId } from "./db";
+import { deliverOrderNotifications, sweepStaleNotifications } from "../email/outbox";
+import { persistRefundEvent, applyRefundEvent } from "../refunds/sync";
+import { sendRefundNotice } from "../refunds/notify";
+import { getPaymentProvider, type PaymentMethod } from "../payments";
+import type { StoreSettings } from "../settings/db";
 import {
   getSettlementReservation,
   markInventoryReservationPaymentPending,
   markInventoryReservationTerminal,
-} from './reservations';
-import { markPendingSettled } from '../payments/lightning/pending';
-import { purgeStockProductCache } from '../cache/purge';
+} from "./reservations";
+import { markPendingSettled } from "../payments/lightning/pending";
+import { purgeStockProductCache } from "../cache/purge";
 
 /**
- * Persist a verified paid-webhook order (idempotent on the provider session id)
- * and fire the confirmation + owner-notification emails exactly once. Shared by
- * the default `/api/webhook` and the per-provider `/api/webhook/[provider]`
- * routes; `paymentMethod` records which rail settled it (for refund routing).
- * Email failures are swallowed — the order is already saved.
+ * Processes a verified payment webhook by updating reservations, recording refunds or paid orders, and delivering related notifications.
  *
- * `settings` is optional but every caller already has it (middleware for /pay,
- * an explicit load in the webhook routes). Passing it removes four D1 reads from
- * the settlement path — the whole-table settings scan plus the three individual
- * lookups whose values are already on `StoreSettings`.
- *
- * `waitUntil` (the ExecutionContext's, when the caller has one) moves the whole
- * notification pipeline — provider construction, the order/items reads, both
- * sends — off the response's critical path. Best-effort by design: sends were
- * already swallowed on failure, so backgrounding them weakens nothing the
- * caller could observe. Callers that need delivery attempted before they
- * answer (the provider webhook routes, whose retries are the safety net) simply
- * don't pass it.
+ * @param result - The verified webhook outcome to process.
+ * @param origin - The origin used for notification links.
+ * @param paymentMethod - The payment rail associated with the webhook, used for refund processing.
+ * @param settings - Optional store settings used for notification delivery.
+ * @param waitUntil - Optional callback for deferring notification delivery until after the response.
  */
 export async function recordPaidWebhookOrder(
   result: WebhookResult,
@@ -50,7 +39,7 @@ export async function recordPaidWebhookOrder(
     await markInventoryReservationTerminal(
       env.DB,
       result.releaseReservationId,
-      'failed',
+      "failed",
       purgeStockProductCache,
     );
   }
@@ -73,12 +62,12 @@ export async function recordPaidWebhookOrder(
       const provider = await getPaymentProvider(paymentMethod as PaymentMethod);
       findSessionIdForPayment = provider.findSessionIdForPayment?.bind(provider);
     } catch (err) {
-      console.error('Refund correlation provider unavailable:', err);
+      console.error("Refund correlation provider unavailable:", err);
     }
     const outcome = await applyRefundEvent(env.DB, paymentMethod, result.refundSync, {
       findSessionIdForPayment,
     });
-    if (outcome.status === 'processed') {
+    if (outcome.status === "processed") {
       await sendRefundNotice(outcome.orderId, outcome.deltaCents, origin);
     }
     return;
@@ -109,11 +98,11 @@ export async function recordPaidWebhookOrder(
       ...paidOrder,
       items: reservation.items,
       reservationStatus:
-        reservation.status === 'active' || reservation.status === 'payment_pending'
+        reservation.status === "active" || reservation.status === "payment_pending"
           ? reservation.status
-          : reservation.status === 'expired'
-            ? 'expired'
-            : 'failed',
+          : reservation.status === "expired"
+            ? "expired"
+            : "failed",
     };
   }
 
@@ -134,7 +123,9 @@ export async function recordPaidWebhookOrder(
       await deliverOrderNotifications(env.DB, existing.id, origin, settings);
       return;
     }
-    throw new Error(`Could not settle inventory reservation ${paidOrder.reservationId ?? 'legacy'}.`);
+    throw new Error(
+      `Could not settle inventory reservation ${paidOrder.reservationId ?? "legacy"}.`,
+    );
   }
   // Orders built from a pending payment settle it inside the batch above
   // (settlePaymentHash); the separate round trip is only for results that
@@ -150,6 +141,7 @@ export async function recordPaidWebhookOrder(
     await deliverOrderNotifications(env.DB, orderId, origin, settings);
     await sweepStaleNotifications(env.DB, origin);
   };
-  if (waitUntil) waitUntil(deliver().catch((err) => console.error('Notification delivery failed:', err)));
+  if (waitUntil)
+    waitUntil(deliver().catch((err) => console.error("Notification delivery failed:", err)));
   else await deliver();
 }

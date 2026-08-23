@@ -1,17 +1,17 @@
-import type { D1Database, D1PreparedStatement } from '@cloudflare/workers-types';
-import { catalogPath, resolveHomePath } from '../settings/home.ts';
-import { withPublicId } from '../ids/publicId.ts';
+import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
+import { catalogPath, resolveHomePath } from "../settings/home.ts";
+import { withPublicId } from "../ids/publicId.ts";
 
-export type MenuLocation = 'header' | 'footer';
-export type MenuTargetType = 'home' | 'catalog' | 'page' | 'product' | 'category';
+export type MenuLocation = "header" | "footer";
+export type MenuTargetType = "home" | "catalog" | "page" | "product" | "category";
 
-export const MENU_LOCATIONS: readonly MenuLocation[] = ['header', 'footer'];
+export const MENU_LOCATIONS: readonly MenuLocation[] = ["header", "footer"];
 export const MENU_TARGET_TYPES: readonly MenuTargetType[] = [
-  'home',
-  'catalog',
-  'page',
-  'product',
-  'category',
+  "home",
+  "catalog",
+  "page",
+  "product",
+  "category",
 ];
 
 /**
@@ -34,9 +34,9 @@ export const MENU_CAPS: Record<MenuLocation, number> = { header: 6, footer: 50 }
  * admin tells the merchant what a blank label will fall back to, and that
  * promise has to match what the storefront actually renders.
  */
-export const SINGLETON_LABELS: Record<'home' | 'catalog', string> = {
-  home: 'Home',
-  catalog: 'Shop',
+export const SINGLETON_LABELS: Record<"home" | "catalog", string> = {
+  home: "Home",
+  catalog: "Shop",
 };
 
 /** Label overrides are merchant free text; bound it before it reaches the DOM. */
@@ -149,9 +149,12 @@ LEFT JOIN categories c  ON mi.target_type = 'category' AND c.id  = mi.target_id
 ORDER BY mi.location, mi.position, mi.id`;
 
 /**
- * Where an item points. Resolved in code, not SQL, because 'catalog' depends on
- * a store setting: the catalog lives at `/` normally and at `/products` once the
- * home page has been pointed elsewhere.
+ * Resolves a menu target to its storefront URL.
+ *
+ * @param targetType - The type of target linked by the menu item
+ * @param slug - The target slug for pages, products, or categories
+ * @param homePage - The configured custom home page path
+ * @returns The URL for the target
  */
 export function resolveMenuHref(
   targetType: MenuTargetType,
@@ -159,20 +162,25 @@ export function resolveMenuHref(
   homePage: string | null | undefined,
 ): string {
   switch (targetType) {
-    case 'home':
-      return '/';
-    case 'catalog':
+    case "home":
+      return "/";
+    case "catalog":
       return catalogPath(homePage);
-    case 'page':
+    case "page":
       return `/pages/${slug}`;
-    case 'product':
+    case "product":
       return `/products/${slug}`;
-    case 'category':
+    case "category":
       return `/categories/${slug}`;
   }
 }
 
-/** Row → renderable item. `text` is the override, else the target's own name. */
+/**
+ * Converts a menu database row into a renderable menu item.
+ *
+ * @param homePage - The configured custom home page used to resolve the item URL
+ * @returns The menu item with its display text, URL, availability, and target status
+ */
 export function toMenuItem(row: MenuItemRow, homePage: string | null | undefined): MenuItem {
   return {
     id: row.id,
@@ -182,7 +190,7 @@ export function toMenuItem(row: MenuItemRow, homePage: string | null | undefined
     targetId: row.target_id,
     position: row.position,
     label: row.label,
-    text: row.label ?? row.target_name ?? '',
+    text: row.label ?? row.target_name ?? "",
     targetName: row.target_name,
     href: resolveMenuHref(row.target_type, row.target_slug, homePage),
     available: row.available === 1,
@@ -197,16 +205,22 @@ export function groupMenus(rows: MenuItemRow[], homePage: string | null | undefi
   for (const row of rows) {
     const item = toMenuItem(row, homePage);
     // Defensive: a location outside the CHECK constraint would otherwise throw.
-    if (item.location === 'header' || item.location === 'footer') menus[item.location].push(item);
+    if (item.location === "header" || item.location === "footer") menus[item.location].push(item);
   }
   return menus;
 }
 
 /** Storefront view: unavailable targets are dropped, never rendered as dead links. */
 export function visibleItems(items: MenuItem[]): MenuItem[] {
-  return items.filter((i) => i.available && i.text !== '');
+  return items.filter((i) => i.available && i.text !== "");
 }
 
+/**
+ * Retrieves the header and footer navigation menus.
+ *
+ * @param homePage - The configured custom home page used when grouping menu items.
+ * @returns The grouped header and footer menu items.
+ */
 export async function getMenus(
   db: D1Database,
   homePage: string | null | undefined,
@@ -216,39 +230,32 @@ export async function getMenus(
 }
 
 export const isMenuLocation = (v: unknown): v is MenuLocation =>
-  typeof v === 'string' && (MENU_LOCATIONS as readonly string[]).includes(v);
+  typeof v === "string" && (MENU_LOCATIONS as readonly string[]).includes(v);
 
 export const isMenuTargetType = (v: unknown): v is MenuTargetType =>
-  typeof v === 'string' && (MENU_TARGET_TYPES as readonly string[]).includes(v);
+  typeof v === "string" && (MENU_TARGET_TYPES as readonly string[]).includes(v);
 
-export const isSingleton = (t: MenuTargetType): boolean => t === 'home' || t === 'catalog';
+export const isSingleton = (t: MenuTargetType): boolean => t === "home" || t === "catalog";
 
-/** Empty/blank overrides are stored as NULL so COALESCE does the fallback. */
+/**
+ * Normalizes a menu label by trimming whitespace, converting blank values to `null`, and limiting nonblank values to the maximum label length.
+ *
+ * @param value - The value to normalize
+ * @returns The normalized label, or `null` for blank values
+ */
 export function normalizeLabel(value: unknown): string | null {
-  const text = String(value ?? '').trim();
-  return text === '' ? null : text.slice(0, MAX_MENU_LABEL);
+  const text = String(value ?? "").trim();
+  return text === "" ? null : text.slice(0, MAX_MENU_LABEL);
 }
 
-export type AddFailure = 'full' | 'duplicate' | 'unavailable';
+export type AddFailure = "full" | "duplicate" | "unavailable";
 export type AddResult = { ok: true; id: number } | { ok: false; reason: AddFailure };
 
 /**
- * Add one item.
+ * Adds a usable target to a menu when capacity and uniqueness rules allow it.
  *
- * Guarded single statement rather than check-then-insert: the count, the target
- * check, and the singleton check all have to hold at the moment of the write, and
- * the next position is computed in the same statement so two admin tabs cannot
- * collide on it.
- *
- * The target check is here, not only in the picker. The UI offering only
- * available targets is a convenience; a stale form, a resubmitted POST, or a
- * hand-crafted request must not be able to add a draft page or an inactive
- * product.
- *
- * The singleton check is here too, even though a partial unique index also
- * enforces it, because the index enforces it by RAISING — which reaches the
- * merchant as a 500 rather than as a sentence. The index stays as the backstop
- * for a genuine race where two requests both pass this guard.
+ * @param input - The menu location, target, and optional display label.
+ * @returns A success result with the new item ID, or a failure reason indicating that the menu is full, the target is duplicated, or the target is unavailable.
  */
 export async function addMenuItem(
   db: D1Database,
@@ -263,7 +270,7 @@ export async function addMenuItem(
   const cap = MENU_CAPS[location];
 
   try {
-    const result = await withPublicId('navItem', (publicId) =>
+    const result = await withPublicId("navItem", (publicId) =>
       db
         .prepare(
           `INSERT INTO menu_items (location, target_type, target_id, label, position, public_id)
@@ -291,7 +298,7 @@ export async function addMenuItem(
     // The backstop fired: another request inserted the same singleton between our
     // guard and our write. Same outcome as the guarded case, same message.
     if (/UNIQUE constraint failed/i.test(err instanceof Error ? err.message : String(err))) {
-      return { ok: false, reason: 'duplicate' };
+      return { ok: false, reason: "duplicate" };
     }
     throw err;
   }
@@ -301,6 +308,14 @@ export async function addMenuItem(
   return { ok: false, reason: await diagnoseAddFailure(db, location, targetType, cap) };
 }
 
+/**
+ * Classifies why adding a menu item was rejected.
+ *
+ * @param location - The menu location being checked
+ * @param targetType - The target type of the item being added
+ * @param cap - The maximum number of items allowed at the location
+ * @returns `duplicate` for an existing singleton target, `full` when the location has reached its cap, or `unavailable` otherwise
+ */
 async function diagnoseAddFailure(
   db: D1Database,
   location: MenuLocation,
@@ -309,16 +324,16 @@ async function diagnoseAddFailure(
 ): Promise<AddFailure> {
   if (isSingleton(targetType)) {
     const dupe = await db
-      .prepare('SELECT 1 AS x FROM menu_items WHERE location = ? AND target_type = ? LIMIT 1')
+      .prepare("SELECT 1 AS x FROM menu_items WHERE location = ? AND target_type = ? LIMIT 1")
       .bind(location, targetType)
       .first<{ x: number }>();
-    if (dupe) return 'duplicate';
+    if (dupe) return "duplicate";
   }
   const count = await db
-    .prepare('SELECT COUNT(*) AS c FROM menu_items WHERE location = ?')
+    .prepare("SELECT COUNT(*) AS c FROM menu_items WHERE location = ?")
     .bind(location)
     .first<{ c: number }>();
-  return (count?.c ?? 0) >= cap ? 'full' : 'unavailable';
+  return (count?.c ?? 0) >= cap ? "full" : "unavailable";
 }
 
 /** Menu-item row id for a nav_ public ID (boundary resolution; null if missing). */
@@ -327,19 +342,24 @@ export async function getMenuItemIdByPublicId(
   publicId: string,
 ): Promise<number | null> {
   const row = await db
-    .prepare('SELECT id FROM menu_items WHERE public_id = ?')
+    .prepare("SELECT id FROM menu_items WHERE public_id = ?")
     .bind(publicId)
     .first<{ id: number }>();
   return row?.id ?? null;
 }
 
-/** public_id → row id for one menu, for resolving a submitted reorder list. */
+/**
+ * Maps public menu item IDs to database row IDs for a menu location.
+ *
+ * @param location - The menu location whose items are mapped
+ * @returns A map of public menu item IDs to database row IDs
+ */
 export async function menuItemIdsByPublicId(
   db: D1Database,
   location: MenuLocation,
 ): Promise<Map<string, number>> {
   const { results } = await db
-    .prepare('SELECT id, public_id FROM menu_items WHERE location = ?')
+    .prepare("SELECT id, public_id FROM menu_items WHERE location = ?")
     .bind(location)
     .all<{ id: number; public_id: string | null }>();
   const map = new Map<string, number>();
@@ -350,31 +370,37 @@ export async function menuItemIdsByPublicId(
 }
 
 export async function removeMenuItem(db: D1Database, id: number): Promise<void> {
-  await db.prepare('DELETE FROM menu_items WHERE id = ?').bind(id).run();
+  await db.prepare("DELETE FROM menu_items WHERE id = ?").bind(id).run();
 }
 
+/**
+ * Updates the label of a menu item.
+ *
+ * @param id - The menu item's database ID
+ * @param label - The new label, or `null` to clear it
+ */
 export async function setMenuItemLabel(
   db: D1Database,
   id: number,
   label: string | null,
 ): Promise<void> {
-  await db.prepare('UPDATE menu_items SET label = ? WHERE id = ?').bind(label, id).run();
+  await db.prepare("UPDATE menu_items SET label = ? WHERE id = ?").bind(label, id).run();
 }
 
 /**
- * Swap an item with its neighbour.
+ * Moves a menu item one position in the requested direction.
  *
- * Both writes go in one batch so a failure cannot leave two items sharing a
- * position — which would still render, but in an order the merchant did not
- * choose and cannot predict.
+ * Does nothing when the item or an adjacent item is not found.
+ *
+ * @param direction - The direction to move the item: `"up"` or `"down"`
  */
 export async function moveMenuItem(
   db: D1Database,
   id: number,
-  direction: 'up' | 'down',
+  direction: "up" | "down",
 ): Promise<void> {
   const item = await db
-    .prepare('SELECT id, location, position FROM menu_items WHERE id = ?')
+    .prepare("SELECT id, location, position FROM menu_items WHERE id = ?")
     .bind(id)
     .first<{ id: number; location: MenuLocation; position: number }>();
   if (!item) return;
@@ -383,7 +409,7 @@ export async function moveMenuItem(
   // one actually rendered next to it even when positions collide.
   const neighbour = await db
     .prepare(
-      direction === 'up'
+      direction === "up"
         ? `SELECT id, position FROM menu_items
             WHERE location = ?1 AND (position < ?2 OR (position = ?2 AND id < ?3))
             ORDER BY position DESC, id DESC LIMIT 1`
@@ -396,25 +422,17 @@ export async function moveMenuItem(
   if (!neighbour) return;
 
   await db.batch([
-    db.prepare('UPDATE menu_items SET position = ? WHERE id = ?').bind(neighbour.position, item.id),
-    db.prepare('UPDATE menu_items SET position = ? WHERE id = ?').bind(item.position, neighbour.id),
+    db.prepare("UPDATE menu_items SET position = ? WHERE id = ?").bind(neighbour.position, item.id),
+    db.prepare("UPDATE menu_items SET position = ? WHERE id = ?").bind(item.position, neighbour.id),
   ]);
 }
 
 /**
- * Set the whole order of one menu from an ordered id list (drag-and-drop).
+ * Reorders all items in a menu according to an ordered ID list.
  *
- * One CASE statement per chunk rather than one UPDATE per row: 50 footer items
- * would otherwise be 50 statements, and D1 allows only 50 queries per Worker
- * invocation on the Free plan — the admin request already spends some of that.
- * Chunked at 30 because each item costs two bound parameters (one in the CASE,
- * one in the IN list) against D1's 100-parameter ceiling: 30 + 1 + 30 = 61.
- *
- * Positions are interpolated integers, not parameters — they are array indices
- * this function computes, never merchant input.
- *
- * Scoped by location, so a tampered id list cannot drag an item out of the menu
- * it belongs to.
+ * @param location - The menu location whose items are reordered
+ * @param ids - A complete, duplicate-free list of item IDs in the desired order
+ * @returns `true` if the list is valid and the order is updated, `false` otherwise
  */
 export async function reorderMenuItems(
   db: D1Database,
@@ -430,7 +448,7 @@ export async function reorderMenuItems(
   // same reason. Validated here rather than in the route, so the browser is not
   // the correctness boundary.
   const { results } = await db
-    .prepare('SELECT id FROM menu_items WHERE location = ?')
+    .prepare("SELECT id FROM menu_items WHERE location = ?")
     .bind(location)
     .all<{ id: number }>();
   const current = new Set((results ?? []).map((r) => r.id));
@@ -444,8 +462,8 @@ export async function reorderMenuItems(
   const statements: D1PreparedStatement[] = [];
   for (let i = 0; i < ids.length; i += CHUNK) {
     const chunk = ids.slice(i, i + CHUNK);
-    const cases = chunk.map((_, j) => `WHEN ? THEN ${i + j}`).join(' ');
-    const placeholders = chunk.map(() => '?').join(', ');
+    const cases = chunk.map((_, j) => `WHEN ? THEN ${i + j}`).join(" ");
+    const placeholders = chunk.map(() => "?").join(", ");
     statements.push(
       db
         .prepare(

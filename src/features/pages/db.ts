@@ -1,5 +1,5 @@
-import type { D1Database } from '@cloudflare/workers-types';
-import { withPublicId } from '../ids/publicId.ts';
+import type { D1Database } from "@cloudflare/workers-types";
+import { withPublicId } from "../ids/publicId.ts";
 
 export interface Page {
   id: number;
@@ -32,21 +32,35 @@ export const PUBLISHED_PAGE_LINKS_SQL = `SELECT title, slug FROM pages
    ORDER BY title COLLATE NOCASE, id
    LIMIT ${MAX_FOOTER_PAGE_LINKS}`;
 
+/**
+ * Retrieves a page by its database ID.
+ *
+ * @param id - The page's database ID
+ * @returns The matching page, or `null` if no page exists with that ID
+ */
 export async function getPage(db: D1Database, id: number): Promise<Page | null> {
-  return db.prepare('SELECT * FROM pages WHERE id = ?').bind(id).first<Page>();
+  return db.prepare("SELECT * FROM pages WHERE id = ?").bind(id).first<Page>();
 }
 
-/** Page by its prefixed public ID (boundary resolution; null if missing). */
+/**
+ * Retrieves a page by its public ID.
+ *
+ * @param publicId - The prefixed public identifier of the page
+ * @returns The matching page, or `null` if no page is found
+ */
 export async function getPageByPublicId(db: D1Database, publicId: string): Promise<Page | null> {
-  return db.prepare('SELECT * FROM pages WHERE public_id = ?').bind(publicId).first<Page>();
+  return db.prepare("SELECT * FROM pages WHERE public_id = ?").bind(publicId).first<Page>();
 }
 
-export async function getPublishedPageBySlug(
-  db: D1Database,
-  slug: string,
-): Promise<Page | null> {
+/**
+ * Retrieves a published page by its slug.
+ *
+ * @param slug - The page slug to search for
+ * @returns The matching published page, or `null` if no page matches
+ */
+export async function getPublishedPageBySlug(db: D1Database, slug: string): Promise<Page | null> {
   return db
-    .prepare('SELECT * FROM pages WHERE slug = ? AND published = 1')
+    .prepare("SELECT * FROM pages WHERE slug = ? AND published = 1")
     .bind(slug)
     .first<Page>();
 }
@@ -54,7 +68,7 @@ export async function getPublishedPageBySlug(
 /** Admin listing: drafts included, newest activity first. */
 export async function listPages(db: D1Database): Promise<Page[]> {
   const { results } = await db
-    .prepare('SELECT * FROM pages ORDER BY updated_at DESC, id DESC')
+    .prepare("SELECT * FROM pages ORDER BY updated_at DESC, id DESC")
     .all<Page>();
   return results ?? [];
 }
@@ -67,42 +81,54 @@ export async function listPublishedPageLinks(db: D1Database): Promise<PageLink[]
 /** Every published page, for the sitemap and llms.txt (no footer cap). */
 export async function listPublishedPages(db: D1Database): Promise<PageLink[]> {
   const { results } = await db
-    .prepare('SELECT title, slug FROM pages WHERE published = 1 ORDER BY title COLLATE NOCASE, id')
+    .prepare("SELECT title, slug FROM pages WHERE published = 1 ORDER BY title COLLATE NOCASE, id")
     .all<PageLink>();
   return results ?? [];
 }
 
 /**
- * Published pages as {id, title} for admin pickers. Ids rather than slugs
- * because a setting that points at a page must survive it being renamed.
+ * Lists published pages for administrative selectors.
+ *
+ * @returns Published page IDs, public IDs, and titles ordered by title and ID
  */
 export async function listPublishedPageOptions(
   db: D1Database,
 ): Promise<Array<{ id: number; public_id: string | null; title: string }>> {
   const { results } = await db
     .prepare(
-      'SELECT id, public_id, title FROM pages WHERE published = 1 ORDER BY title COLLATE NOCASE, id',
+      "SELECT id, public_id, title FROM pages WHERE published = 1 ORDER BY title COLLATE NOCASE, id",
     )
     .all<{ id: number; public_id: string | null; title: string }>();
   return results ?? [];
 }
 
-/** New pages start unpublished: media can only be attached once an id exists. */
-export async function createDraft(
-  db: D1Database,
-  title: string,
-  slug: string,
-): Promise<number> {
-  return withPublicId('page', async (publicId) => {
+/**
+ * Creates an unpublished page draft.
+ *
+ * @param title - The page title
+ * @param slug - The page slug
+ * @returns The database ID of the created page
+ * @throws If the page insert does not return a row
+ */
+export async function createDraft(db: D1Database, title: string, slug: string): Promise<number> {
+  return withPublicId("page", async (publicId) => {
     const row = await db
-      .prepare('INSERT INTO pages (title, slug, published, public_id) VALUES (?, ?, 0, ?) RETURNING id')
+      .prepare(
+        "INSERT INTO pages (title, slug, published, public_id) VALUES (?, ?, 0, ?) RETURNING id",
+      )
       .bind(title, slug, publicId)
       .first<{ id: number }>();
-    if (!row) throw new Error('page insert returned no row');
+    if (!row) throw new Error("page insert returned no row");
     return row.id;
   });
 }
 
+/**
+ * Updates a page's content, publication state, layout, and modification timestamp.
+ *
+ * @param id - The database ID of the page to update
+ * @param fields - The page fields to save
+ */
 export async function updatePage(
   db: D1Database,
   id: number,
@@ -123,14 +149,7 @@ export async function updatePage(
               updated_at = datetime('now')
         WHERE id = ?`,
     )
-    .bind(
-      fields.title,
-      fields.slug,
-      fields.body_markdown,
-      fields.published,
-      fields.layout,
-      id,
-    )
+    .bind(fields.title, fields.slug, fields.body_markdown, fields.published, fields.layout, id)
     .run();
 }
 
@@ -140,7 +159,7 @@ export async function updatePage(
  */
 export async function deletePage(db: D1Database, id: number): Promise<void> {
   await db.batch([
-    db.prepare('DELETE FROM page_media WHERE page_id = ?').bind(id),
-    db.prepare('DELETE FROM pages WHERE id = ?').bind(id),
+    db.prepare("DELETE FROM page_media WHERE page_id = ?").bind(id),
+    db.prepare("DELETE FROM pages WHERE id = ?").bind(id),
   ]);
 }

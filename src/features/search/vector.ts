@@ -1,30 +1,31 @@
-import { markdownExcerpt } from '../pages/markdown.ts';
-import type { Ai, D1Database, VectorizeIndex } from '@cloudflare/workers-types';
-import type { SearchProvider, SearchResult } from './provider';
-import { getProductsByIds, type Product } from '../products/db';
-import { normalizeSearchQuery } from './query';
+import { markdownExcerpt } from "../pages/markdown.ts";
+import type { Ai, D1Database, VectorizeIndex } from "@cloudflare/workers-types";
+import type { SearchProvider, SearchResult } from "./provider";
+import { getProductsByIds, type Product } from "../products/db";
+import { normalizeSearchQuery } from "./query";
 
 /**
- * Embed text with a Workers AI embedding model → a vector. The bge models return
- * `{ data: [[...numbers]] }`; for one input the vector is `data[0]`. Pure (takes
- * the binding as a param) so the shape-parsing is unit-testable with a mock.
+ * Generates an embedding vector for a text input.
+ *
+ * @returns The embedding vector.
+ * @throws If the embedding response is missing or empty.
  */
 export async function embedText(ai: Ai, model: string, text: string): Promise<number[]> {
   // The model id is a string literal in the binding's overloads; cast through.
-  const res = (await (ai as unknown as { run: (m: string, i: { text: string[] }) => Promise<unknown> }).run(
-    model,
-    { text: [text] },
-  )) as { data?: number[][] };
+  const res = (await (
+    ai as unknown as { run: (m: string, i: { text: string[] }) => Promise<unknown> }
+  ).run(model, { text: [text] })) as { data?: number[][] };
   const vector = res.data?.[0];
-  if (!vector || vector.length === 0) throw new Error('embedding failed: empty response');
+  if (!vector || vector.length === 0) throw new Error("embedding failed: empty response");
   return vector;
 }
 
 /**
- * The text we embed for a product: name + description + its category names. The
- * category line gives the vector class context, so a query like "outdoor gear"
- * matches products in the Outdoors category even when those words aren't in the
- * name/description. `categoryNames` is optional (omitted → just name+description).
+ * Builds the text representation used to embed a product.
+ *
+ * @param p - The product name and optional description to include.
+ * @param categoryNames - Category names that provide additional product context.
+ * @returns The product name, description excerpt, and category context joined by newlines.
  */
 export function productEmbedText(
   p: { name: string; description: string | null },
@@ -33,8 +34,8 @@ export function productEmbedText(
   const parts = [p.name];
   // Embed the prose, not the Markdown punctuation.
   if (p.description) parts.push(markdownExcerpt(p.description, 5000));
-  if (categoryNames.length > 0) parts.push(`Categories: ${categoryNames.join(', ')}`);
-  return parts.join('\n');
+  if (categoryNames.length > 0) parts.push(`Categories: ${categoryNames.join(", ")}`);
+  return parts.join("\n");
 }
 
 /**
@@ -43,7 +44,7 @@ export function productEmbedText(
  * side aligns the two and spreads similarity scores apart (relevant high,
  * off-topic low), so MIN_SCORE can meaningfully reject junk queries.
  */
-const QUERY_INSTRUCTION = 'Represent this sentence for searching relevant passages: ';
+const QUERY_INSTRUCTION = "Represent this sentence for searching relevant passages: ";
 
 /**
  * Minimum cosine similarity a match must clear to count as a result. Without this,

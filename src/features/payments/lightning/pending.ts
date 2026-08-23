@@ -1,5 +1,5 @@
-import type { D1Database } from '@cloudflare/workers-types';
-import type { PaidOrderInput, OrderItemInput, ShippingAddress } from '../../orders/db';
+import type { D1Database } from "@cloudflare/workers-types";
+import type { PaidOrderInput, OrderItemInput, ShippingAddress } from "../../orders/db";
 
 /**
  * Pending Lightning payments — the in-flight state between minting a BOLT11
@@ -46,7 +46,7 @@ export interface NewPendingPayment {
   shippingCents?: number;
   shippingLabel?: string | null;
   shippingWeightGrams?: number | null;
-  deliveryMethod?: 'pickup' | 'shipping' | null;
+  deliveryMethod?: "pickup" | "shipping" | null;
   /** Pre-serialized JSON ShippingAddress, or null. */
   shipAddressJson?: string | null;
   /** Inventory hold created with this payment; absent for legacy rows. */
@@ -82,22 +82,34 @@ export async function createPendingPayment(db: D1Database, p: NewPendingPayment)
     .run();
 }
 
+/**
+ * Retrieves a pending payment by its public identifier.
+ *
+ * @param publicId - The public identifier of the payment
+ * @returns The matching pending payment, or `null` if no payment is found
+ */
 export async function getPendingByPublicId(
   db: D1Database,
   publicId: string,
 ): Promise<PendingPayment | null> {
   return db
-    .prepare('SELECT * FROM pending_payments WHERE public_id = ?')
+    .prepare("SELECT * FROM pending_payments WHERE public_id = ?")
     .bind(publicId)
     .first<PendingPayment>();
 }
 
+/**
+ * Retrieves a pending payment by its payment hash.
+ *
+ * @param paymentHash - The payment hash identifying the pending payment
+ * @returns The matching pending payment, or `null` if none exists
+ */
 export async function getPendingByHash(
   db: D1Database,
   paymentHash: string,
 ): Promise<PendingPayment | null> {
   return db
-    .prepare('SELECT * FROM pending_payments WHERE payment_hash = ?')
+    .prepare("SELECT * FROM pending_payments WHERE payment_hash = ?")
     .bind(paymentHash)
     .first<PendingPayment>();
 }
@@ -111,10 +123,11 @@ export async function markPendingSettled(db: D1Database, paymentHash: string): P
 }
 
 /**
- * Build a PaidOrderInput from a settled pending row (pure). The cart snapshot was
- * stored as the compact checkout snapshot shape: [{ id, q, n, p }].
- * Lives here (not in a provider) so it stays free of `cloudflare:workers` imports
- * and is unit-testable. Shared by the Lightning and OpenNode providers.
+ * Converts a pending payment record into the input required to create a paid order.
+ *
+ * Invalid cart or shipping snapshots produce an empty item list or `null` shipping address.
+ *
+ * @returns The paid order data derived from the pending payment record
  */
 export function pendingToPaidOrder(p: PendingPayment): PaidOrderInput {
   let items: OrderItemInput[] = [];
@@ -155,7 +168,12 @@ export function pendingToPaidOrder(p: PendingPayment): PaidOrderInput {
     shippingCents: p.shipping_cents,
     shippingLabel: p.shipping_label,
     shippingWeightGrams: p.shipping_weight_grams,
-    deliveryMethod: p.delivery_method === 'pickup' ? 'pickup' : p.delivery_method === 'shipping' ? 'shipping' : null,
+    deliveryMethod:
+      p.delivery_method === "pickup"
+        ? "pickup"
+        : p.delivery_method === "shipping"
+          ? "shipping"
+          : null,
     shippingAddress,
     currency: p.currency,
     items,

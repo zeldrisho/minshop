@@ -1,22 +1,21 @@
-import type { D1Database } from '@cloudflare/workers-types';
+import type { D1Database } from "@cloudflare/workers-types";
 import type {
   PaymentProvider,
   CreateCheckoutParams,
   CheckoutResult,
   WebhookResult,
-} from './provider';
-import { createPendingPayment } from './lightning/pending';
+} from "./provider";
+import { createPendingPayment } from "./lightning/pending";
 
 export const DEMO_CHECKOUT_TTL_SECONDS = 24 * 60 * 60;
 
 /**
- * Demo payment provider — the automatic fallback when NO real rail is configured
- * (see getPaymentProvider). Collects nothing real: createCheckout stashes the
- * order snapshot in pending_payments (backend='demo') and sends the buyer to the
- * self-rendered /pay page, which simulates approval/decline and records the
- * order in-page (no webhook). Orders are tagged payment_method='demo', so they're
- * excluded from revenue and badged in the admin. Lets a freshly-deployed store be
- * exercised end-to-end before any Stripe key is added.
+ * Creates a demo payment provider for testing checkout flows without a real payment rail.
+ *
+ * The provider stores pending checkout data and directs buyers to the self-rendered payment
+ * page. Demo payments settle on that page and do not use webhooks.
+ *
+ * @returns A configured demo payment provider.
  */
 export function createDemoProvider(db: D1Database): PaymentProvider {
   return {
@@ -31,11 +30,11 @@ export function createDemoProvider(db: D1Database): PaymentProvider {
       await createPendingPayment(db, {
         publicId,
         paymentHash: `demo_${publicId}`, // satisfies the table's unique session id
-        backend: 'demo',
+        backend: "demo",
         bolt11: null,
         amountSat: null,
         amountTotalCents: subtotal + shippingCents,
-        currency: params.lineItems[0]?.currency ?? 'usd',
+        currency: params.lineItems[0]?.currency ?? "usd",
         email: params.selectedShipping?.email ?? null,
         itemsJson: params.orderItemsJson ?? null,
         shippingCents,
@@ -59,7 +58,7 @@ export function createDemoProvider(db: D1Database): PaymentProvider {
 
     async verifyWebhook(): Promise<WebhookResult> {
       // Demo settles in-page (see /pay) — there is no external webhook.
-      throw new Error('Demo provider has no webhook.');
+      throw new Error("Demo provider has no webhook.");
     },
   };
 }

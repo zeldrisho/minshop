@@ -1,7 +1,7 @@
-import type { D1Database } from '@cloudflare/workers-types';
-import { findMediaByKeys, pageMediaClaimStatements } from '../media/db.ts';
-import { extractMediaKeys } from './markdown.ts';
-import { type Page } from './db.ts';
+import type { D1Database } from "@cloudflare/workers-types";
+import { findMediaByKeys, pageMediaClaimStatements } from "../media/db.ts";
+import { extractMediaKeys } from "./markdown.ts";
+import { type Page } from "./db.ts";
 
 export interface SaveResult {
   /** Keys the body references that are not in the media library. */
@@ -13,20 +13,15 @@ export interface SaveResult {
 }
 
 /**
- * Persist a page body and rebuild its media associations, atomically.
+ * Saves a page body and updates its media associations.
  *
- * Unresolved media never costs the author their work: the text is always saved.
- * What it blocks is a DRAFT going live with images that would render broken.
- * An already-published page is left published — silently unpublishing a live
- * page because one image went missing is a far worse outcome than one broken
- * image the admin is warned about.
+ * Missing media is reported while the page content is still saved. A requested
+ * publication is refused when media is unresolved, while explicit
+ * unpublishing and the published state of an existing live page are preserved.
  *
- * The claims and the publish decision go in ONE batch, which D1 runs as a
- * transaction. Writing them separately left a race: media deleted after the
- * lookup but before the claims landed would be skipped silently, and the page
- * had already been published by then. Here the UPDATE decides `published` from
- * a COUNT of the rows the same transaction just claimed, so a claim that lost
- * to a concurrent delete refuses the draft-to-live transition instead.
+ * @param fields - The page content and requested publication state.
+ * @param options - Options used to resolve media references.
+ * @returns The unresolved media keys, whether publication was refused, and the stored publication state.
  */
 export async function savePageBody(
   db: D1Database,
@@ -84,7 +79,7 @@ export async function savePageBody(
 
   // Read back what the transaction actually stored rather than assuming.
   const saved = await db
-    .prepare('SELECT published FROM pages WHERE id = ?')
+    .prepare("SELECT published FROM pages WHERE id = ?")
     .bind(existing.id)
     .first<{ published: number }>();
   const published = saved?.published ?? blockedValue;
@@ -98,10 +93,10 @@ export async function savePageBody(
 
 /** Admin-facing summary of what happened, or '' when everything resolved. */
 export function saveWarning(result: SaveResult): string {
-  if (result.unresolved.length === 0 && !result.publishRefused) return '';
+  if (result.unresolved.length === 0 && !result.publishRefused) return "";
   const count = Math.max(result.unresolved.length, 1);
-  const images = `${count} image${count === 1 ? '' : 's'}`;
-  const is = count === 1 ? 'is' : 'are';
+  const images = `${count} image${count === 1 ? "" : "s"}`;
+  const is = count === 1 ? "is" : "are";
   if (result.publishRefused) {
     return `Changes saved, but this page was not published because ${images} ${is} missing from the media library.`;
   }

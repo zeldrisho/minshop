@@ -1,8 +1,8 @@
-import type { D1Database } from '@cloudflare/workers-types';
-import { listProductImages } from './db';
-import { toMinorUnits } from '../../money';
-import { toGrams, type WeightUnit } from '../shipping/weight';
-import { withPublicId } from '../ids/publicId.ts';
+import type { D1Database } from "@cloudflare/workers-types";
+import { listProductImages } from "./db";
+import { toMinorUnits } from "../../money";
+import { toGrams, type WeightUnit } from "../shipping/weight";
+import { withPublicId } from "../ids/publicId.ts";
 
 /** A purchasable variant (the SKU/inventory unit). A product has 0 or N. */
 export interface ProductVariant {
@@ -40,7 +40,7 @@ export async function listVariants(
   productId: number,
   includeInactive = false,
 ): Promise<ProductVariant[]> {
-  const where = includeInactive ? '' : ' AND active = 1';
+  const where = includeInactive ? "" : " AND active = 1";
   const { results } = await db
     .prepare(`SELECT * FROM product_variants WHERE product_id = ?${where} ORDER BY position, id`)
     .bind(productId)
@@ -48,13 +48,18 @@ export async function listVariants(
   return results ?? [];
 }
 
-/** Extras for a product, in display order. Active-only unless includeInactive. */
+/**
+ * Lists a product's extras in display order.
+ *
+ * @param includeInactive - Whether to include inactive extras.
+ * @returns The product's extras, ordered by position and ID.
+ */
 export async function listExtras(
   db: D1Database,
   productId: number,
   includeInactive = false,
 ): Promise<ProductExtra[]> {
-  const where = includeInactive ? '' : ' AND active = 1';
+  const where = includeInactive ? "" : " AND active = 1";
   const { results } = await db
     .prepare(`SELECT * FROM product_extras WHERE product_id = ?${where} ORDER BY position, id`)
     .bind(productId)
@@ -62,19 +67,28 @@ export async function listExtras(
   return results ?? [];
 }
 
-/** One variant by id (any product), or null. */
+/**
+ * Fetches a product variant by its database ID.
+ *
+ * @param id - The variant's database ID
+ * @returns The matching product variant, or `null` if no variant has that ID
+ */
 export async function getVariant(db: D1Database, id: number): Promise<ProductVariant | null> {
-  return db.prepare('SELECT * FROM product_variants WHERE id = ?').bind(id).first<ProductVariant>();
+  return db.prepare("SELECT * FROM product_variants WHERE id = ?").bind(id).first<ProductVariant>();
 }
 
-/** Active variants for many ids in one cart-resolution read. */
+/**
+ * Retrieves active product variants matching the specified database IDs.
+ *
+ * @returns The matching active product variants.
+ */
 export async function getActiveVariantsByIds(
   db: D1Database,
   ids: number[],
 ): Promise<ProductVariant[]> {
   const unique = [...new Set(ids)];
   if (unique.length === 0) return [];
-  const ph = unique.map(() => '?').join(',');
+  const ph = unique.map(() => "?").join(",");
   const { results } = await db
     .prepare(`SELECT * FROM product_variants WHERE active = 1 AND id IN (${ph})`)
     .bind(...unique)
@@ -82,14 +96,18 @@ export async function getActiveVariantsByIds(
   return results ?? [];
 }
 
-/** Active variants for many public IDs in one cart-resolution read. */
+/**
+ * Fetches active variants matching the provided public IDs.
+ *
+ * @returns The matching active product variants.
+ */
 export async function getActiveVariantsByPublicIds(
   db: D1Database,
   publicIds: string[],
 ): Promise<ProductVariant[]> {
   const unique = [...new Set(publicIds)];
   if (unique.length === 0) return [];
-  const ph = unique.map(() => '?').join(',');
+  const ph = unique.map(() => "?").join(",");
   const { results } = await db
     .prepare(`SELECT * FROM product_variants WHERE active = 1 AND public_id IN (${ph})`)
     .bind(...unique)
@@ -99,17 +117,14 @@ export async function getActiveVariantsByPublicIds(
 
 /** One extra by id (any product), or null. */
 export async function getExtra(db: D1Database, id: number): Promise<ProductExtra | null> {
-  return db.prepare('SELECT * FROM product_extras WHERE id = ?').bind(id).first<ProductExtra>();
+  return db.prepare("SELECT * FROM product_extras WHERE id = ?").bind(id).first<ProductExtra>();
 }
 
 /** Active extras for many ids in one cart-resolution read. */
-export async function getActiveExtrasByIds(
-  db: D1Database,
-  ids: number[],
-): Promise<ProductExtra[]> {
+export async function getActiveExtrasByIds(db: D1Database, ids: number[]): Promise<ProductExtra[]> {
   const unique = [...new Set(ids)];
   if (unique.length === 0) return [];
-  const ph = unique.map(() => '?').join(',');
+  const ph = unique.map(() => "?").join(",");
   const { results } = await db
     .prepare(`SELECT * FROM product_extras WHERE active = 1 AND id IN (${ph})`)
     .bind(...unique)
@@ -117,14 +132,19 @@ export async function getActiveExtrasByIds(
   return results ?? [];
 }
 
-/** Active extras for many public IDs in one cart-resolution read (any product). */
+/**
+ * Resolves active extras across products by their public IDs.
+ *
+ * @param publicIds - Public IDs to look up
+ * @returns The matching active extras
+ */
 export async function getActiveExtrasByPublicIds(
   db: D1Database,
   publicIds: string[],
 ): Promise<ProductExtra[]> {
   const unique = [...new Set(publicIds)];
   if (unique.length === 0) return [];
-  const ph = unique.map(() => '?').join(',');
+  const ph = unique.map(() => "?").join(",");
   const { results } = await db
     .prepare(`SELECT * FROM product_extras WHERE active = 1 AND public_id IN (${ph})`)
     .bind(...unique)
@@ -132,14 +152,19 @@ export async function getActiveExtrasByPublicIds(
   return results ?? [];
 }
 
-/** Extras belonging to a product, selected by prefixed public IDs. */
+/**
+ * Retrieves active extras belonging to a product by their public IDs.
+ *
+ * @param publicIds - The public IDs used to select the extras.
+ * @returns The matching extras, ordered by position and ID.
+ */
 export async function getExtrasByPublicIds(
   db: D1Database,
   productId: number,
   publicIds: string[],
 ): Promise<ProductExtra[]> {
   if (publicIds.length === 0) return [];
-  const ph = publicIds.map(() => '?').join(',');
+  const ph = publicIds.map(() => "?").join(",");
   const { results } = await db
     .prepare(
       `SELECT * FROM product_extras WHERE product_id = ? AND active = 1 AND public_id IN (${ph}) ORDER BY position, id`,
@@ -149,14 +174,20 @@ export async function getExtrasByPublicIds(
   return results ?? [];
 }
 
-/** Active extras for the given ids that belong to `productId` (drops foreign/inactive). */
+/**
+ * Retrieves active extras belonging to a specific product.
+ *
+ * @param productId - The product whose extras may be returned
+ * @param ids - The extra IDs to retrieve
+ * @returns The matching active extras, ordered by position and ID
+ */
 export async function getExtrasByIds(
   db: D1Database,
   productId: number,
   ids: number[],
 ): Promise<ProductExtra[]> {
   if (ids.length === 0) return [];
-  const ph = ids.map(() => '?').join(',');
+  const ph = ids.map(() => "?").join(",");
   const { results } = await db
     .prepare(
       `SELECT * FROM product_extras WHERE product_id = ? AND active = 1 AND id IN (${ph}) ORDER BY position, id`,
@@ -168,15 +199,27 @@ export async function getExtrasByIds(
 
 // ── Admin writes ─────────────────────────────────────────────────────────────
 
-/** The variant group's display name on a product (e.g. "Size"); null = none. */
+/** Sets the display label for a product’s variant group.
+
+ * @param label - The label to display, or `null` to clear it.
+ */
 export async function setVariantLabel(
   db: D1Database,
   productId: number,
   label: string | null,
 ): Promise<void> {
-  await db.prepare('UPDATE products SET variant_label = ? WHERE id = ?').bind(label, productId).run();
+  await db
+    .prepare("UPDATE products SET variant_label = ? WHERE id = ?")
+    .bind(label, productId)
+    .run();
 }
 
+/**
+ * Creates a product variant with its pricing, inventory, labeling, and optional metadata.
+ *
+ * @param productId - The ID of the product that owns the variant
+ * @param v - The variant data to store
+ */
 export async function createVariant(
   db: D1Database,
   productId: number,
@@ -191,14 +234,24 @@ export async function createVariant(
   },
 ): Promise<void> {
   // Default position appends to the end of the list (so new rows don't jump up top).
-  const position = v.position ?? (await nextPosition(db, 'product_variants', productId));
-  await withPublicId('variant', (publicId) =>
+  const position = v.position ?? (await nextPosition(db, "product_variants", productId));
+  await withPublicId("variant", (publicId) =>
     db
       .prepare(
         `INSERT INTO product_variants (product_id, label, price_cents, stock, sku, image_id, position, weight_grams, public_id)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .bind(productId, v.label, v.price_cents, v.stock, v.sku, v.image_id ?? null, position, v.weight_grams ?? null, publicId)
+      .bind(
+        productId,
+        v.label,
+        v.price_cents,
+        v.stock,
+        v.sku,
+        v.image_id ?? null,
+        position,
+        v.weight_grams ?? null,
+        publicId,
+      )
       .run(),
   );
 }
@@ -226,22 +279,33 @@ export async function updateVariant(
 /** Null out any variant that referenced a now-deleted gallery image. */
 export async function clearVariantImage(db: D1Database, imageId: number): Promise<void> {
   await db
-    .prepare('UPDATE product_variants SET image_id = NULL WHERE image_id = ?')
+    .prepare("UPDATE product_variants SET image_id = NULL WHERE image_id = ?")
     .bind(imageId)
     .run();
 }
 
+/**
+ * Deletes a product variant by its database ID.
+ *
+ * @param id - The database ID of the variant to delete
+ */
 export async function deleteVariant(db: D1Database, id: number): Promise<void> {
-  await db.prepare('DELETE FROM product_variants WHERE id = ?').bind(id).run();
+  await db.prepare("DELETE FROM product_variants WHERE id = ?").bind(id).run();
 }
 
+/**
+ * Creates a purchasable extra for a product.
+ *
+ * @param productId - The ID of the product associated with the extra
+ * @param e - The extra's label, price adjustment in cents, and optional display position
+ */
 export async function createExtra(
   db: D1Database,
   productId: number,
   e: { label: string; price_delta_cents: number; position?: number },
 ): Promise<void> {
-  const position = e.position ?? (await nextPosition(db, 'product_extras', productId));
-  await withPublicId('extra', (publicId) =>
+  const position = e.position ?? (await nextPosition(db, "product_extras", productId));
+  await withPublicId("extra", (publicId) =>
     db
       .prepare(
         `INSERT INTO product_extras (product_id, label, price_delta_cents, position, public_id)
@@ -255,7 +319,7 @@ export async function createExtra(
 /** Next position (MAX+1) for a product's variant/extra list — keeps new rows at the end. */
 async function nextPosition(
   db: D1Database,
-  table: 'product_variants' | 'product_extras',
+  table: "product_variants" | "product_extras",
   productId: number,
 ): Promise<number> {
   const row = await db
@@ -265,19 +329,30 @@ async function nextPosition(
   return (row?.m ?? -1) + 1;
 }
 
+/**
+ * Updates the label and price adjustment for a product extra.
+ *
+ * @param id - The database ID of the product extra
+ * @param e - The updated label and price adjustment in cents
+ */
 export async function updateExtra(
   db: D1Database,
   id: number,
   e: { label: string; price_delta_cents: number },
 ): Promise<void> {
   await db
-    .prepare('UPDATE product_extras SET label = ?, price_delta_cents = ? WHERE id = ?')
+    .prepare("UPDATE product_extras SET label = ?, price_delta_cents = ? WHERE id = ?")
     .bind(e.label, e.price_delta_cents, id)
     .run();
 }
 
+/**
+ * Deletes a product extra by its database ID.
+ *
+ * @param id - The database ID of the extra to delete
+ */
 export async function deleteExtra(db: D1Database, id: number): Promise<void> {
-  await db.prepare('DELETE FROM product_extras WHERE id = ?').bind(id).run();
+  await db.prepare("DELETE FROM product_extras WHERE id = ?").bind(id).run();
 }
 
 /**
@@ -297,42 +372,58 @@ export async function deleteExtra(db: D1Database, id: number): Promise<void> {
  * Prices arrive in major units and are scaled to `currency`.
  */
 /**
- * Reject a mistyped variant weight with nothing written. This is separate from
- * applyVariantForm so the route can run it BEFORE the product/image/category
- * writes — validating mid-way produced a half-saved edit behind an error page,
- * and under weight pricing a silently dropped weight is a mis-quoted order.
+ * Validates submitted variant weights before they are saved.
+ *
+ * @param form - Form data containing variant weight values.
+ * @param weightUnit - Unit used to interpret the submitted weights.
+ * @returns An error message for the first invalid weight, or `null` when all weights are valid.
  */
-export function validateVariantWeights(
-  form: FormData,
-  weightUnit: WeightUnit,
-): string | null {
-  const raws = form.getAll('v_weight').map((v) => String(v));
+export function validateVariantWeights(form: FormData, weightUnit: WeightUnit): string | null {
+  const raws = form.getAll("v_weight").map((v) => String(v));
   for (let i = 0; i < raws.length; i++) {
     const parsed = toGrams(raws[i]!, weightUnit);
-    if (parsed.status !== 'error') continue;
+    if (parsed.status !== "error") continue;
     const what =
-      parsed.reason === 'negative'
-        ? 'weight cannot be negative.'
-        : parsed.reason === 'precision'
+      parsed.reason === "negative"
+        ? "weight cannot be negative."
+        : parsed.reason === "precision"
           ? `weight has too many decimal places for ${weightUnit}.`
-          : parsed.reason === 'over_limit'
-            ? 'weight is too heavy for parcel shipping.'
-            : 'weight must be a number.';
+          : parsed.reason === "over_limit"
+            ? "weight is too heavy for parcel shipping."
+            : "weight must be a number.";
     return `Variant ${i + 1}: ${what}`;
   }
   return null;
 }
 
+/**
+ * Applies submitted variant and extra changes to a product.
+ *
+ * Validates weights, updates the variant-group label, and creates, updates, or
+ * removes product-owned variants and extras. Image references are restricted to
+ * the product's gallery, and prices are converted from major currency units.
+ *
+ * @param productId - The product whose variants and extras are being edited
+ * @param form - The submitted variants and extras form data
+ * @param currency - The currency used to interpret submitted prices
+ * @param weightUnit - The unit used for submitted variant weights
+ * @returns An error message when validation fails; otherwise, an empty object
+ */
 export async function applyVariantForm(
   db: D1Database,
   productId: number,
   form: FormData,
   currency: string,
-  weightUnit: WeightUnit = 'g',
+  weightUnit: WeightUnit = "g",
 ): Promise<{ error?: string }> {
   const str = (name: string) => form.getAll(name).map((v) => String(v));
   const ids = (name: string) =>
-    new Set(form.getAll(name).map((v) => Number(v)).filter((n) => Number.isInteger(n) && n > 0));
+    new Set(
+      form
+        .getAll(name)
+        .map((v) => Number(v))
+        .filter((n) => Number.isInteger(n) && n > 0),
+    );
   const price = (s: string) => {
     const n = Number(String(s).trim());
     return Number.isFinite(n) && n > 0 ? toMinorUnits(n, currency) : 0;
@@ -344,8 +435,8 @@ export async function applyVariantForm(
   // Blank inherits the product's weight; an explicit 0 is a known weight and must
   // survive as 0 rather than collapsing back to "inherit".
   const weight = (s: string): number | null => {
-    const parsed = toGrams(String(s ?? ''), weightUnit);
-    return parsed.status === 'ok' ? parsed.grams : null;
+    const parsed = toGrams(String(s ?? ""), weightUnit);
+    return parsed.status === "ok" ? parsed.grams : null;
   };
 
   // Endpoints must call validateVariantWeights BEFORE their first write; this
@@ -354,7 +445,11 @@ export async function applyVariantForm(
   if (invalid) return { error: invalid };
 
   // The variant group label (null clears it).
-  await setVariantLabel(db, productId, String(form.get('variant_group_label') ?? '').trim() || null);
+  await setVariantLabel(
+    db,
+    productId,
+    String(form.get("variant_group_label") ?? "").trim() || null,
+  );
 
   // Only allow image links to THIS product's gallery images.
   const galleryIds = new Set((await listProductImages(db, productId)).map((i) => i.id));
@@ -364,29 +459,29 @@ export async function applyVariantForm(
   };
 
   // ── Variants ────────────────────────────────────────────────────────────────
-  const vRemove = ids('v_remove');
+  const vRemove = ids("v_remove");
   for (const vid of vRemove) {
     const v = await getVariant(db, vid);
     if (v && v.product_id === productId) await deleteVariant(db, vid);
   }
-  const vIds = str('v_id');
-  const vLabels = str('v_label');
-  const vPrices = str('v_price');
-  const vStocks = str('v_stock');
-  const vSkus = str('v_sku');
-  const vImages = str('v_image');
-  const vWeights = str('v_weight');
+  const vIds = str("v_id");
+  const vLabels = str("v_label");
+  const vPrices = str("v_price");
+  const vStocks = str("v_stock");
+  const vSkus = str("v_sku");
+  const vImages = str("v_image");
+  const vWeights = str("v_weight");
   for (let i = 0; i < vLabels.length; i++) {
     const id = Number(vIds[i]);
-    const label = (vLabels[i] ?? '').trim();
+    const label = (vLabels[i] ?? "").trim();
     if (Number.isInteger(id) && vRemove.has(id)) continue; // already deleted
-    const parsedWeight = weight(vWeights[i] ?? '');
+    const parsedWeight = weight(vWeights[i] ?? "");
     const fields = {
       label,
-      price_cents: price(vPrices[i] ?? ''),
-      stock: count(vStocks[i] ?? ''),
-      sku: (vSkus[i] ?? '').trim() || null,
-      image_id: pickImage(vImages[i] ?? ''),
+      price_cents: price(vPrices[i] ?? ""),
+      stock: count(vStocks[i] ?? ""),
+      sku: (vSkus[i] ?? "").trim() || null,
+      image_id: pickImage(vImages[i] ?? ""),
       weight_grams: parsedWeight ?? null,
     };
     if (Number.isInteger(id) && id > 0) {
@@ -399,19 +494,19 @@ export async function applyVariantForm(
   }
 
   // ── Extras ──────────────────────────────────────────────────────────────────
-  const eRemove = ids('e_remove');
+  const eRemove = ids("e_remove");
   for (const eid of eRemove) {
     const e = await getExtra(db, eid);
     if (e && e.product_id === productId) await deleteExtra(db, eid);
   }
-  const eIds = str('e_id');
-  const eLabels = str('e_label');
-  const ePrices = str('e_price');
+  const eIds = str("e_id");
+  const eLabels = str("e_label");
+  const ePrices = str("e_price");
   for (let i = 0; i < eLabels.length; i++) {
     const id = Number(eIds[i]);
-    const label = (eLabels[i] ?? '').trim();
+    const label = (eLabels[i] ?? "").trim();
     if (Number.isInteger(id) && eRemove.has(id)) continue;
-    const fields = { label, price_delta_cents: price(ePrices[i] ?? '') };
+    const fields = { label, price_delta_cents: price(ePrices[i] ?? "") };
     if (Number.isInteger(id) && id > 0) {
       if (!label) continue;
       const e = await getExtra(db, id);
@@ -430,7 +525,7 @@ export async function decrementVariantStock(
   qty: number,
 ): Promise<void> {
   await db
-    .prepare('UPDATE product_variants SET stock = MAX(0, stock - ?) WHERE id = ?')
+    .prepare("UPDATE product_variants SET stock = MAX(0, stock - ?) WHERE id = ?")
     .bind(qty, variantId)
     .run();
 }

@@ -1,5 +1,5 @@
-import type { D1Database } from '@cloudflare/workers-types';
-import type { MenuItem, MenuLocation, MenuTargetType } from './db.ts';
+import type { D1Database } from "@cloudflare/workers-types";
+import type { MenuItem, MenuLocation, MenuTargetType } from "./db.ts";
 
 /**
  * How many options a picker offers before the merchant has to search.
@@ -26,22 +26,11 @@ export interface TargetChoices {
 }
 
 /**
- * Options for the target picker.
+ * Finds available navigation targets matching a search query.
  *
- * Bounded, and searchable rather than merely truncated. A single unbounded
- * <select> would render every product into every admin page load; a bare cap —
- * the mistake the home-page selector made — bounds the payload but makes item
- * N+1 permanently unselectable, which removes capability rather than limiting it.
- *
- * Alphabetical, not most-recent: `pages` has updated_at but `products` and
- * `categories` only have created_at, so a recency order would silently mean three
- * different things. It is also the wrong affordance — a merchant building
- * navigation is hunting for one known item, not reviewing recent edits.
- *
- * Only AVAILABLE targets are offered. An item already pointing at a draft or
- * inactive target still appears in the menu list with its warning; the list and
- * the picker answer different questions ("what is in this menu" vs "what may I
- * add"), so they deliberately disagree.
+ * @param targetType - The type of target to search
+ * @param query - The search text used to match target names
+ * @returns The matching target options and the number of additional matches beyond the result limit
  */
 export async function targetChoices(
   db: D1Database,
@@ -49,9 +38,9 @@ export async function targetChoices(
   query: string,
 ): Promise<TargetChoices> {
   const sources: Partial<Record<MenuTargetType, { table: string; name: string; where: string }>> = {
-    page: { table: 'pages', name: 'title', where: 'published = 1' },
-    product: { table: 'products', name: 'name', where: 'active = 1' },
-    category: { table: 'categories', name: 'name', where: '1 = 1' },
+    page: { table: "pages", name: "title", where: "published = 1" },
+    product: { table: "products", name: "name", where: "active = 1" },
+    category: { table: "categories", name: "name", where: "1 = 1" },
   };
   const source = sources[targetType];
   if (!source) return { options: [], remaining: 0 };
@@ -59,7 +48,7 @@ export async function targetChoices(
   const q = query.trim();
   // LIKE with a short, merchant-supplied pattern only. D1 rejects long patterns
   // outright ("LIKE or GLOB pattern too complex"), so the search term is bounded.
-  const filter = q ? `AND ${source.name} LIKE ?1` : '';
+  const filter = q ? `AND ${source.name} LIKE ?1` : "";
   const pattern = `%${q.slice(0, 60)}%`;
 
   const listSql = `SELECT id, public_id, ${source.name} AS name FROM ${source.table}
@@ -80,41 +69,35 @@ export async function targetChoices(
 }
 
 /**
- * Why an item is hidden on the storefront, or null when it is fine.
+ * Explains why a menu item is unavailable on the storefront.
  *
- * Categories have no draft or inactive state — 0004_categories.sql defines only
- * id/name/slug/parent_id/created_at — so deletion is the only way one becomes
- * unavailable, which also makes it the easiest to miss.
+ * @param item - The menu item to evaluate
+ * @returns The unavailability reason, or `null` when the item is available
  */
 export function unavailableReason(item: MenuItem): string | null {
   if (item.available) return null;
   // targetExists, not an empty label: a custom label outlives its target, so a
   // deleted page labelled "Company" still renders text and would otherwise be
   // reported as a draft — sending the merchant to un-draft a page that is gone.
-  if (!item.targetExists) return 'Target no longer exists';
+  if (!item.targetExists) return "Target no longer exists";
   switch (item.targetType) {
-    case 'page':
-      return 'Draft — hidden on the storefront';
-    case 'product':
-      return 'Inactive — hidden on the storefront';
-    case 'category':
-      return 'Target no longer exists';
+    case "page":
+      return "Draft — hidden on the storefront";
+    case "product":
+      return "Inactive — hidden on the storefront";
+    case "category":
+      return "Target no longer exists";
     default:
-      return 'Unavailable';
+      return "Unavailable";
   }
 }
 
 /**
- * Which menus reference each of these targets, keyed by target id.
+ * Finds menu locations that reference each target ID.
  *
- * For the admin list pages, so deleting a page/product/category can say what it
- * will break BEFORE it happens. The storefront hides the resulting dead item
- * safely, but silently — without this the merchant only discovers the gap later,
- * in Navigation, with no idea why a menu shrank.
- *
- * One bounded query for the whole list rather than one per row. Ids come from a
- * page of admin rows, so the IN list is small, but chunk anyway: D1 allows 100
- * bound parameters per query.
+ * @param targetType - The type of targets to search for
+ * @param ids - The target IDs to look up
+ * @returns A map from each referenced target ID to its unique menu locations
  */
 export async function menuReferencesFor(
   db: D1Database,
@@ -127,7 +110,7 @@ export async function menuReferencesFor(
   const CHUNK = 90; // under D1's 100-parameter ceiling, with room for target_type
   for (let i = 0; i < ids.length; i += CHUNK) {
     const chunk = ids.slice(i, i + CHUNK);
-    const placeholders = chunk.map(() => '?').join(', ');
+    const placeholders = chunk.map(() => "?").join(", ");
     const { results } = await db
       .prepare(
         `SELECT DISTINCT target_id, location FROM menu_items
@@ -145,9 +128,9 @@ export async function menuReferencesFor(
 }
 
 export const TARGET_TYPE_LABELS: Record<MenuTargetType, string> = {
-  home: 'Home',
-  catalog: 'Catalog',
-  page: 'Page',
-  product: 'Product',
-  category: 'Category',
+  home: "Home",
+  catalog: "Catalog",
+  page: "Page",
+  product: "Product",
+  category: "Category",
 };

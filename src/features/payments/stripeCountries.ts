@@ -10,7 +10,7 @@
  * unit tests and scripts/check-stripe-countries.mjs can load it directly.
  */
 
-import { COUNTRY_CODES, isCountryCode } from '../shipping/countries.ts';
+import { COUNTRY_CODES, isCountryCode } from "../shipping/countries.ts";
 
 /**
  * Exactly the ISO alpha-2 codes absent from the pinned SDK's
@@ -21,10 +21,30 @@ import { COUNTRY_CODES, isCountryCode } from '../shipping/countries.ts';
  * from the installed SDK.
  */
 export const STRIPE_UNSUPPORTED: ReadonlySet<string> = new Set([
-  'AS', 'CC', 'CU', 'CX', 'FM', 'HM', 'IR', 'KP',
-  'MH', 'MP', 'NF', 'PW', 'SY', 'UM', 'VI',
+  "AS",
+  "CC",
+  "CU",
+  "CX",
+  "FM",
+  "HM",
+  "IR",
+  "KP",
+  "MH",
+  "MP",
+  "NF",
+  "PW",
+  "SY",
+  "UM",
+  "VI",
 ]);
 
+/**
+ * Builds the country codes available for Stripe based on the configured coverage.
+ *
+ * @param explicit - Country codes explicitly configured for use.
+ * @param hasCatchAll - Whether all known country codes should be considered.
+ * @returns Uppercase country codes excluding those unsupported by Stripe.
+ */
 export function stripeAllowedCountries(explicit: string[], hasCatchAll: boolean): string[] {
   const codes = hasCatchAll ? COUNTRY_CODES : explicit;
   return codes.map((c) => c.toUpperCase()).filter((c) => !STRIPE_UNSUPPORTED.has(c));

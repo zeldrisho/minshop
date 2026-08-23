@@ -1,32 +1,25 @@
-import { env } from 'cloudflare:workers';
-import { getConfig } from '../../config';
-import type { Product } from '../products/db';
-import { getProductsByIds, setRelatedIds, parseRelatedIds } from '../products/db';
-import type { SearchProvider } from './provider';
-import { createFtsSearch } from './fts';
-import {
-  createVectorSearch,
-  embedText,
-  productEmbedText,
-  relatedByVector,
-} from './vector';
-import type { SearchResult } from './provider';
-import { categoriesForProduct } from '../categories/db';
-import { getSetting } from '../settings/db';
+import { env } from "cloudflare:workers";
+import { getConfig } from "../../config";
+import type { Product } from "../products/db";
+import { getProductsByIds, setRelatedIds, parseRelatedIds } from "../products/db";
+import type { SearchProvider } from "./provider";
+import { createFtsSearch } from "./fts";
+import { createVectorSearch, embedText, productEmbedText, relatedByVector } from "./vector";
+import type { SearchResult } from "./provider";
+import { categoriesForProduct } from "../categories/db";
+import { getSetting } from "../settings/db";
 
-export type { SearchProvider, SearchResult } from './provider';
+export type { SearchProvider, SearchResult } from "./provider";
 
 /**
- * Effective search backend. The runtime setting (Admin → Settings → Search,
- * persisted in D1) overlays the build-time default (config.search.provider /
- * SEARCH_PROVIDER) — so an owner can switch to semantic search without a redeploy.
- * Falls back to the build-time default if the setting is unset or the table is
- * missing (pre-migration).
+ * Selects the active search provider from the runtime setting or configured default.
+ *
+ * @returns The configured search provider, either `"fts"` or `"vector"`
  */
-async function effectiveProvider(): Promise<'fts' | 'vector'> {
+async function effectiveProvider(): Promise<"fts" | "vector"> {
   try {
-    const runtime = await getSetting(env.DB, 'search_provider');
-    if (runtime === 'fts' || runtime === 'vector') return runtime;
+    const runtime = await getSetting(env.DB, "search_provider");
+    if (runtime === "fts" || runtime === "vector") return runtime;
   } catch {
     // settings table absent (pre-migration) → use the build-time default
   }
@@ -34,17 +27,13 @@ async function effectiveProvider(): Promise<'fts' | 'vector'> {
 }
 
 /**
- * True when semantic search is selected, its bindings are present, AND we're not
- * in local dev. Vectorize has no local emulation — under `astro dev` the binding
- * object exists but every call throws "needs to be run remotely", so we treat dev
- * as not-ready and let it fall back to FTS (semantic search is a deployed concern).
+ * Determines whether vector search is available in the current environment.
+ *
+ * @returns `true` if the vector provider is selected, the application is not running in development mode, and the required bindings are available, `false` otherwise.
  */
 async function vectorReady(): Promise<boolean> {
   return (
-    (await effectiveProvider()) === 'vector' &&
-    !import.meta.env.DEV &&
-    !!env.AI &&
-    !!env.VECTORIZE
+    (await effectiveProvider()) === "vector" && !import.meta.env.DEV && !!env.AI && !!env.VECTORIZE
   );
 }
 
@@ -69,16 +58,19 @@ export async function getRelatedByVector(productId: number, limit = 4): Promise<
 }
 
 /**
- * Compute a product's semantic neighbours and persist them on the product row.
- * Called at catalog-write time (create/update/reindex) and lazily in the
- * background on a cache miss, so the request path never pays for Vectorize.
- * Silent no-op when semantic search is off or the lookup fails — a missing list
- * just means the page uses category-based related instead.
+ * Computes and stores vector-related product IDs for a product.
+ *
+ * @param productId - The product whose related IDs are updated
+ * @param limit - The maximum number of related products to store
  */
 async function storeRelatedIdsReady(productId: number, limit: number): Promise<void> {
   try {
     const related = await relatedByVector(env.VECTORIZE!, env.DB, productId, limit);
-    await setRelatedIds(env.DB, productId, related.map((p) => p.id));
+    await setRelatedIds(
+      env.DB,
+      productId,
+      related.map((p) => p.id),
+    );
   } catch {
     // Leave the column as-is; the page still renders with the category fallback.
   }
@@ -90,12 +82,14 @@ export async function storeRelatedIds(productId: number, limit = 4): Promise<voi
 }
 
 /**
- * Read a product's stored neighbours. `related_ids` may reference products that
- * have since been deleted or deactivated — getProductsByIds filters on active,
- * so stale entries drop out silently rather than 404ing a row.
+ * Retrieves a product's stored related products in similarity order.
+ *
+ * @param product - The product whose stored related IDs are read
+ * @param limit - The maximum number of stored related IDs to retrieve
+ * @returns The matching active products, an empty array when no related products are stored, or `null` when related products have not been computed
  */
 export async function getRelatedStored(
-  product: Pick<Product, 'id' | 'related_ids'>,
+  product: Pick<Product, "id" | "related_ids">,
   limit = 4,
 ): Promise<Product[] | null> {
   const ids = parseRelatedIds(product.related_ids);
@@ -107,6 +101,11 @@ export async function getRelatedStored(
   return ids.map((id) => byId.get(id)).filter((p): p is Product => p !== undefined);
 }
 
+/**
+ * Selects the configured search provider and enables hybrid semantic and keyword search when vector search is available.
+ *
+ * @returns A search provider that combines semantic results with full-text results and falls back to full-text search if vector search is unavailable or fails.
+ */
 export async function getSearchProvider(): Promise<SearchProvider> {
   const cfg = getConfig().search;
   if (!(await vectorReady())) return createFtsSearch(env.DB);
@@ -136,7 +135,7 @@ export async function getSearchProvider(): Promise<SearchProvider> {
           excludeIds: options.excludeIds,
         });
       } catch (err) {
-        console.error('Vector search failed; FTS only:', err);
+        console.error("Vector search failed; FTS only:", err);
       }
 
       const semantic = vectorRes.products;
@@ -160,14 +159,17 @@ export async function getSearchProvider(): Promise<SearchProvider> {
 }
 
 /**
- * Upsert a product's embedding into the index. No-op unless semantic search is
- * on — so admin product writes stay binding-free in the default (FTS) config.
- * Callers should not let a failure here block the write (wrap in try/catch).
+ * Indexes a product for semantic search and refreshes its related products.
+ *
+ * Does nothing when vector search is unavailable.
  */
 export async function indexProduct(p: Product): Promise<void> {
   if (!(await vectorReady())) return;
   const cats = await categoriesForProduct(env.DB, p.id);
-  const text = productEmbedText(p, cats.map((c) => c.name));
+  const text = productEmbedText(
+    p,
+    cats.map((c) => c.name),
+  );
   const values = await embedText(env.AI!, getConfig().search.embeddingModel, text);
   await env.VECTORIZE!.upsert([{ id: String(p.id), values }]);
   // Refresh this product's neighbours now that its vector changed. Neighbours of
@@ -182,14 +184,26 @@ export async function unindexProduct(id: number): Promise<void> {
   await env.VECTORIZE!.deleteByIds([String(id)]);
 }
 
-/** Embed + upsert many products (the reindex/backfill path). Returns the count. */
+/**
+ * Indexes a batch of products and updates their stored related-product IDs.
+ *
+ * @param products - Products to embed and index
+ * @returns The number of products indexed, or `0` when vector search is unavailable or the batch is empty
+ */
 export async function indexProducts(products: Product[]): Promise<number> {
   if (!(await vectorReady()) || products.length === 0) return 0;
   const model = getConfig().search.embeddingModel;
   const vectors = await Promise.all(
     products.map(async (p) => {
       const cats = await categoriesForProduct(env.DB, p.id);
-      const values = await embedText(env.AI!, model, productEmbedText(p, cats.map((c) => c.name)));
+      const values = await embedText(
+        env.AI!,
+        model,
+        productEmbedText(
+          p,
+          cats.map((c) => c.name),
+        ),
+      );
       return { id: String(p.id), values };
     }),
   );

@@ -1,15 +1,12 @@
-import type { D1Database } from '@cloudflare/workers-types';
-import {
-  visibleStockChanged,
-  type StockTransitionPurger,
-} from '../products/stock.ts';
-import type { OrderItemInput } from './db';
-import { generatePublicId, isPublicIdConflict } from '../ids/publicId.ts';
+import type { D1Database } from "@cloudflare/workers-types";
+import { visibleStockChanged, type StockTransitionPurger } from "../products/stock.ts";
+import type { OrderItemInput } from "./db";
+import { generatePublicId, isPublicIdConflict } from "../ids/publicId.ts";
 import {
   DIGITAL_DELIVERY_RELEASE,
   lifecycleActive,
   type DigitalDeliveryRelease,
-} from '../digitalDelivery/rollout.ts';
+} from "../digitalDelivery/rollout.ts";
 
 export interface ReservationItem extends OrderItemInput {
   productId: number;
@@ -21,12 +18,12 @@ export interface ReservationItem extends OrderItemInput {
 }
 
 export type ReservationStatus =
-  | 'active'
-  | 'payment_pending'
-  | 'settled'
-  | 'released'
-  | 'expired'
-  | 'failed';
+  | "active"
+  | "payment_pending"
+  | "settled"
+  | "released"
+  | "expired"
+  | "failed";
 
 interface ReservationRow {
   public_id: string;
@@ -64,6 +61,12 @@ export function aggregateStockTargets(items: ReservationItem[]): StockTarget[] {
   return [...targets.values()];
 }
 
+/**
+ * Parses and validates a serialized reservation item list.
+ *
+ * @param value - The JSON-encoded reservation items
+ * @returns The validated reservation items, or `null` if the value is invalid
+ */
 function parseItems(value: string): ReservationItem[] | null {
   try {
     const items = JSON.parse(value) as ReservationItem[];
@@ -79,12 +82,14 @@ function parseItems(value: string): ReservationItem[] | null {
           !Number.isInteger(item.priceCents) ||
           item.priceCents < 0 ||
           (item.variantId != null && (!Number.isInteger(item.variantId) || item.variantId < 1)) ||
-          (item.publicId != null && (typeof item.publicId !== 'string' || !item.publicId.startsWith('itm_'))) ||
-          (item.fileKey != null && typeof item.fileKey !== 'string') ||
-          (item.fileName != null && typeof item.fileName !== 'string') ||
-          (item.fileMime != null && typeof item.fileMime !== 'string') ||
-          (item.fileSizeBytes != null && (!Number.isInteger(item.fileSizeBytes) || item.fileSizeBytes < 0)) ||
-          typeof item.name !== 'string',
+          (item.publicId != null &&
+            (typeof item.publicId !== "string" || !item.publicId.startsWith("itm_"))) ||
+          (item.fileKey != null && typeof item.fileKey !== "string") ||
+          (item.fileName != null && typeof item.fileName !== "string") ||
+          (item.fileMime != null && typeof item.fileMime !== "string") ||
+          (item.fileSizeBytes != null &&
+            (!Number.isInteger(item.fileSizeBytes) || item.fileSizeBytes < 0)) ||
+          typeof item.name !== "string",
       )
     ) {
       return null;
@@ -95,19 +100,33 @@ function parseItems(value: string): ReservationItem[] | null {
   }
 }
 
+/**
+ * Retrieves a reservation by its public identifier.
+ *
+ * @param publicId - The reservation's public identifier
+ * @returns The matching reservation row, or `null` if no reservation is found
+ */
 async function getReservation(db: D1Database, publicId: string): Promise<ReservationRow | null> {
   return db
-    .prepare('SELECT public_id, items, status, expires_at, terminal_at FROM checkout_reservations WHERE public_id = ?')
+    .prepare(
+      "SELECT public_id, items, status, expires_at, terminal_at FROM checkout_reservations WHERE public_id = ?",
+    )
     .bind(publicId)
     .first<ReservationRow>();
 }
 
 const ITEM_ID_LOOKUP_CHUNK = 40;
 
+/**
+ * Checks whether any public item ID is already claimed in an order-item table.
+ *
+ * @param publicIds - The item IDs to check
+ * @returns `true` if any ID is claimed, `false` otherwise
+ */
 async function hasClaimedItemId(db: D1Database, publicIds: string[]): Promise<boolean> {
   for (let offset = 0; offset < publicIds.length; offset += ITEM_ID_LOOKUP_CHUNK) {
     const chunk = publicIds.slice(offset, offset + ITEM_ID_LOOKUP_CHUNK);
-    const placeholders = chunk.map(() => '?').join(',');
+    const placeholders = chunk.map(() => "?").join(",");
     const existing = await db
       .prepare(
         `SELECT public_id FROM order_items WHERE public_id IN (${placeholders})
@@ -120,20 +139,26 @@ async function hasClaimedItemId(db: D1Database, publicIds: string[]): Promise<bo
   return false;
 }
 
+/**
+ * Resolves product database IDs to their public IDs.
+ *
+ * @param productIds - The product database IDs to resolve
+ * @returns The public IDs found for the specified products
+ */
 async function publicIdsForProducts(
   db: D1Database,
   productIds: Iterable<number>,
 ): Promise<string[]> {
   const ids = [...new Set(productIds)];
   if (ids.length === 0) return [];
-  const placeholders = ids.map(() => '?').join(',');
+  const placeholders = ids.map(() => "?").join(",");
   const { results } = await db
     .prepare(`SELECT id, public_id FROM products WHERE id IN (${placeholders})`)
     .bind(...ids)
     .all<ProductPublicIdRow>();
   return (results ?? [])
     .map((row) => row.public_id)
-    .filter((publicId): publicId is string => typeof publicId === 'string');
+    .filter((publicId): publicId is string => typeof publicId === "string");
 }
 
 async function purgeTransitions(
@@ -146,13 +171,21 @@ async function purgeTransitions(
   if (publicIds.length > 0) await purger(publicIds);
 }
 
+/**
+ * Releases an active reservation and restores its reserved stock.
+ *
+ * @param publicId - The reservation's public identifier
+ * @param terminalStatus - The terminal status to assign to the reservation
+ * @returns Whether the reservation was released and the product IDs whose visible stock changed
+ * @throws If the reservation contains an invalid item snapshot
+ */
 async function releaseReservation(
   db: D1Database,
   publicId: string,
-  terminalStatus: 'released' | 'expired' | 'failed' = 'released',
+  terminalStatus: "released" | "expired" | "failed" = "released",
 ): Promise<{ released: boolean; changedProductIds: number[] }> {
   const row = await getReservation(db, publicId);
-  if (!row || (row.status !== 'active' && row.status !== 'payment_pending')) {
+  if (!row || (row.status !== "active" && row.status !== "payment_pending")) {
     return { released: false, changedProductIds: [] };
   }
   const items = parseItems(row.items);
@@ -190,7 +223,7 @@ async function releaseReservation(
 
   const changedProductIds = targets.flatMap((target, index) => {
     const after = results[index]?.results[0]?.stock;
-    return typeof after === 'number' &&
+    return typeof after === "number" &&
       visibleStockChanged(target.variantId != null, after - target.quantity, after)
       ? [target.productId]
       : [];
@@ -213,10 +246,10 @@ export async function releaseInventoryReservation(
 export async function markInventoryReservationTerminal(
   db: D1Database,
   publicId: string,
-  status: 'expired' | 'failed',
+  status: "expired" | "failed",
   purger?: StockTransitionPurger,
 ): Promise<boolean> {
-  const result = await releaseReservation(db, publicId, lifecycleActive() ? status : 'released');
+  const result = await releaseReservation(db, publicId, lifecycleActive() ? status : "released");
   await purgeTransitions(db, result.changedProductIds, purger);
   return result.released;
 }
@@ -242,14 +275,19 @@ export async function releaseExpiredReservations(
     const released = await releaseReservation(
       db,
       row.public_id,
-      lifecycleActive() ? 'expired' : 'released',
+      lifecycleActive() ? "expired" : "released",
     );
     changedProductIds.push(...released.changedProductIds);
   }
   await purgeTransitions(db, changedProductIds, purger);
 }
 
-/** Expire one locally authoritative self-rendered hold during a status read. */
+/**
+ * Expires an eligible locally rendered Lightning or Demo reservation during a status read.
+ *
+ * @param publicId - The reservation's public identifier
+ * @returns `true` if stock was released, `false` if the reservation was not eligible or had already been released
+ */
 export async function expireSelfRenderedReservation(
   db: D1Database,
   publicId: string,
@@ -267,23 +305,30 @@ export async function expireSelfRenderedReservation(
   const released = await releaseReservation(
     db,
     publicId,
-    lifecycleActive() ? 'expired' : 'released',
+    lifecycleActive() ? "expired" : "released",
   );
   await purgeTransitions(db, released.changedProductIds, purger);
   return released.released;
 }
 
 /**
- * Atomically claim all requested stock. The reservation row is inserted only if
- * every aggregated stock target is available; decrements are conditional on that
- * row, so a failed multi-line reservation cannot partially consume inventory.
+ * Reserves the requested inventory and creates a checkout reservation.
+ *
+ * The reservation is created only when all requested stock is available. Stock
+ * is decremented atomically with the reservation, and public item identifiers
+ * are regenerated when conflicts occur.
+ *
+ * @param items - The inventory items to reserve
+ * @param ttlSeconds - The reservation lifetime in seconds; must be at least 60
+ * @param release - The digital-delivery lifecycle release governing item ID registration
+ * @returns `true` if the reservation succeeds, `false` if the input is invalid or stock is unavailable
  */
 export async function reserveInventory(
   db: D1Database,
   publicId: string,
   items: ReservationItem[],
   ttlSeconds: number,
-  paymentMethod: 'stripe' | 'opennode' | 'lightning' | 'demo',
+  paymentMethod: "stripe" | "opennode" | "lightning" | "demo",
   purger?: StockTransitionPurger,
   release: DigitalDeliveryRelease = DIGITAL_DELIVERY_RELEASE,
 ): Promise<boolean> {
@@ -295,27 +340,33 @@ export async function reserveInventory(
   const checkValues: number[] = [];
   for (const target of targets) {
     if (target.variantId == null) {
-      checks.push('COALESCE((SELECT stock FROM products WHERE id = ? AND active = 1), -1) >= ?');
+      checks.push("COALESCE((SELECT stock FROM products WHERE id = ? AND active = 1), -1) >= ?");
       checkValues.push(target.productId, target.quantity);
     } else {
-      checks.push('COALESCE((SELECT stock FROM product_variants WHERE id = ? AND active = 1), -1) >= ?');
+      checks.push(
+        "COALESCE((SELECT stock FROM product_variants WHERE id = ? AND active = 1), -1) >= ?",
+      );
       checkValues.push(target.variantId, target.quantity);
     }
   }
 
-  let results: D1Result<(StockUpdateRow & { public_id?: string })>[] | null = null;
+  let results: D1Result<StockUpdateRow & { public_id?: string }>[] | null = null;
   let claimedItems: ReservationItem[] = [];
   let claimStatementCount = 0;
   for (let attempt = 0; attempt < 3; attempt++) {
     claimedItems = items.map((item) => ({
       ...item,
-      publicId: item.publicId ?? (lifecycleActive(release) ? generatePublicId('orderItem') : undefined),
+      publicId:
+        item.publicId ?? (lifecycleActive(release) ? generatePublicId("orderItem") : undefined),
     }));
 
     // Transitional guard while historical order-item IDs are being registered.
     if (
       lifecycleActive(release) &&
-      (await hasClaimedItemId(db, claimedItems.map((item) => item.publicId!)))
+      (await hasClaimedItemId(
+        db,
+        claimedItems.map((item) => item.publicId!),
+      ))
     ) {
       items = items.map((item) => ({ ...item, publicId: undefined }));
       continue;
@@ -325,24 +376,32 @@ export async function reserveInventory(
       .prepare(
         `INSERT INTO checkout_reservations (public_id, items, payment_method, expires_at)
          SELECT ?, ?, ?, datetime('now', ?)
-          WHERE ${checks.join(' AND ')}
+          WHERE ${checks.join(" AND ")}
          ON CONFLICT(public_id) DO NOTHING
          RETURNING public_id`,
       )
-      .bind(publicId, JSON.stringify(claimedItems), paymentMethod, `+${ttlSeconds} seconds`, ...checkValues);
+      .bind(
+        publicId,
+        JSON.stringify(claimedItems),
+        paymentMethod,
+        `+${ttlSeconds} seconds`,
+        ...checkValues,
+      );
     // Release 1 writes no claims, so the decrement results sit at a different
     // offset there. Index off the statements actually batched, never off the
     // item count — getting this wrong silently skips every stock purge.
-    const claims = lifecycleActive(release) ? claimedItems.map((item) =>
-      db
-        .prepare(
-          `INSERT INTO order_item_ids (public_id, order_public_id)
+    const claims = lifecycleActive(release)
+      ? claimedItems.map((item) =>
+          db
+            .prepare(
+              `INSERT INTO order_item_ids (public_id, order_public_id)
            SELECT ?, ? WHERE EXISTS (
              SELECT 1 FROM checkout_reservations WHERE public_id = ? AND status = 'active'
            )`,
+            )
+            .bind(item.publicId, publicId, publicId),
         )
-        .bind(item.publicId, publicId, publicId),
-    ) : [];
+      : [];
     claimStatementCount = claims.length;
     const activeGuard =
       "EXISTS (SELECT 1 FROM checkout_reservations WHERE public_id = ? AND status = 'active')";
@@ -360,20 +419,24 @@ export async function reserveInventory(
             .bind(target.quantity, target.variantId, publicId),
     );
     try {
-      results = await db.batch<StockUpdateRow & { public_id?: string }>([insert, ...claims, ...decrements]);
+      results = await db.batch<StockUpdateRow & { public_id?: string }>([
+        insert,
+        ...claims,
+        ...decrements,
+      ]);
       break;
     } catch (err) {
       if (!isPublicIdConflict(err)) throw err;
       items = items.map((item) => ({ ...item, publicId: undefined }));
     }
   }
-  if (!results) throw new Error('order item identity collision retry exhausted');
+  if (!results) throw new Error("order item identity collision retry exhausted");
   const reserved = Boolean(results[0]?.results[0]);
   if (!reserved) return false;
 
   const changedProductIds = targets.flatMap((target, index) => {
     const after = results[index + 1 + claimStatementCount]?.results[0]?.stock;
-    return typeof after === 'number' &&
+    return typeof after === "number" &&
       visibleStockChanged(target.variantId != null, after + target.quantity, after)
       ? [target.productId]
       : [];
@@ -388,7 +451,7 @@ export async function getActiveReservationItems(
   publicId: string,
 ): Promise<ReservationItem[] | null> {
   const row = await getReservation(db, publicId);
-  return row && (row.status === 'active' || row.status === 'payment_pending')
+  return row && (row.status === "active" || row.status === "payment_pending")
     ? parseItems(row.items)
     : null;
 }
@@ -398,13 +461,18 @@ export interface SettlementReservation {
   status: ReservationStatus;
 }
 
-/** Load an authoritative snapshot for ordinary or late settlement. */
+/**
+ * Loads the item snapshot for a reservation eligible for settlement.
+ *
+ * @param publicId - The reservation's public identifier
+ * @returns The parsed item snapshot and reservation status, or `null` if the reservation is unavailable, ineligible, or invalid
+ */
 export async function getSettlementReservation(
   db: D1Database,
   publicId: string,
 ): Promise<SettlementReservation | null> {
   const row = await getReservation(db, publicId);
-  if (!row || !['active', 'payment_pending', 'expired', 'failed'].includes(row.status)) return null;
+  if (!row || !["active", "payment_pending", "expired", "failed"].includes(row.status)) return null;
   const items = parseItems(row.items);
   return items ? { items, status: row.status } : null;
 }
