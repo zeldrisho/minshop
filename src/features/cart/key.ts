@@ -26,7 +26,14 @@ const canonicalExtras = (xs: string[]): string[] =>
     ...new Set(xs.map((x) => parsePublicId(x, "extra")).filter((x): x is string => x !== null)),
   ].sort();
 
-/** Build the canonical cart key for a product + optional variant + extras. */
+/**
+ * Builds the canonical cart key for a product with an optional variant and extras.
+ *
+ * @param productPublicId - The product's public ID
+ * @param variantPublicId - The optional variant's public ID
+ * @param extraPublicIds - The selected extras' public IDs
+ * @returns The canonical cart key
+ */
 export function cartKey(
   productPublicId: string,
   variantPublicId?: string | null,
@@ -39,7 +46,12 @@ export function cartKey(
   return key;
 }
 
-/** Parse a cart key back to its parts, or null if ANY part is malformed (never trust cookies). */
+/**
+ * Parses a cart key into its product, variant, and extra identifiers.
+ *
+ * @param key - The cart key to parse
+ * @returns The parsed cart key components, or `null` if any component is malformed
+ */
 export function parseCartKey(key: string): ParsedKey | null {
   const [left, extrasPart, spill] = key.split("#");
   if (spill !== undefined) return null; // more than one '#' → malformed

@@ -35,6 +35,12 @@ export interface CartLine {
   availableStock: number; // variant stock when a variant, else product stock
 }
 
+/**
+ * Reads and sanitizes the cart stored in cookies.
+ *
+ * @param cookies - The request cookies containing the cart data
+ * @returns The sanitized cart, or an empty cart when the cookie is missing, malformed, or uses an unsupported version
+ */
 export function readCart(cookies: AstroCookies): Cart {
   const raw = cookies.get(COOKIE);
   if (!raw) return {};
@@ -47,7 +53,12 @@ export function readCart(cookies: AstroCookies): Cart {
   }
 }
 
-/** Keep only well-formed key→qty pairs, clamped — never trust the cookie. */
+/**
+ * Sanitizes cart entries by retaining valid keys and positive integer quantities.
+ *
+ * @param obj - Value containing candidate cart entries
+ * @returns A cart containing valid entries with quantities capped at the maximum
+ */
 function sanitize(obj: unknown): Cart {
   const out: Cart = {};
   if (obj && typeof obj === "object") {
@@ -61,6 +72,12 @@ function sanitize(obj: unknown): Cart {
   return out;
 }
 
+/**
+ * Stores the cart and its item count in cookies with a shared lifetime.
+ *
+ * @param cart - The cart to store.
+ * @param secure - Whether the cookies should require secure connections.
+ */
 export function writeCart(cookies: AstroCookies, cart: Cart, secure: boolean): void {
   cookies.set(
     COOKIE,
@@ -86,19 +103,29 @@ export function writeCart(cookies: AstroCookies, cart: Cart, secure: boolean): v
   });
 }
 
+/**
+ * Removes the cart and cart item-count cookies.
+ */
 export function clearCart(cookies: AstroCookies): void {
   cookies.delete(COOKIE, { path: "/" });
   cookies.delete(COUNT_COOKIE, { path: "/" });
 }
 
+/**
+ * Calculates the total quantity of items in a cart.
+ *
+ * @param cart - The cart whose item quantities are summed
+ * @returns The total quantity of items in the cart
+ */
 export function cartCount(cart: Cart): number {
   return Object.values(cart).reduce((sum, q) => sum + q, 0);
 }
 
 /**
- * Resolve cart public IDs against D1 for current name/price/stock, dropping any
- * that are missing or inactive. One batched read per entity type; pricing always
- * comes from the DB, never the cookie.
+ * Resolves cart entries against current product, variant, and extra data.
+ *
+ * @param cart - The cart entries to resolve.
+ * @returns The resolved cart lines and their subtotal in cents.
  */
 export async function resolveCart(
   db: D1Database,

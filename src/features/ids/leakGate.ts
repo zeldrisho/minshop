@@ -40,7 +40,13 @@ const ID_KEY_RE = /(^id$|_id$)/;
 const PREFIXED_RE = /^([a-z]+)_[0-9abcdefghjkmnpqrstvwxyz]{10}$/;
 const TOKEN_RE = /otk_[A-Za-z0-9_-]{22}/;
 
-/** Recursively inspect a JSON-serializable value; returns every violation. */
+/**
+ * Recursively identifies leaked record IDs, access tokens, and invalid public IDs.
+ *
+ * @param value - The value to inspect.
+ * @param path - The initial location path reported for violations.
+ * @returns All detected violations, including their locations, values, and reasons.
+ */
 export function findLeaks(value: unknown, path = "$"): Leak[] {
   const leaks: Leak[] = [];
   const walk = (v: unknown, p: string, key: string | null) => {
@@ -91,9 +97,10 @@ export function findLeaks(value: unknown, path = "$"): Leak[] {
 }
 
 /**
- * Inspect rendered HTML: numeric ids in form values / hrefs / query params
- * that address records, and stray access tokens. Heuristic by design — it
- * catches `value="42"` on id-named inputs and `/admin/orders/123`-style paths.
+ * Inspects rendered HTML for access tokens and numeric record IDs in form values or record URLs.
+ *
+ * @param html - The rendered HTML markup to inspect
+ * @returns Detected leaks, including their location, value, and violation reason
  */
 export function findHtmlLeaks(html: string): Leak[] {
   const leaks: Leak[] = [];

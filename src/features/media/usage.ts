@@ -45,9 +45,10 @@ const PAGE_USAGE_SQL = `
    ORDER BY pg.title`;
 
 /**
- * Usage for a whole grid page in a bounded number of statements — never one
- * query per row. Ids are bound once per statement (48 parameters for a full
- * page) by joining through `media` rather than also binding a derived key list.
+ * Collects product, page, and store-logo usage for the specified media items.
+ *
+ * @param ids - The media IDs to inspect.
+ * @returns A map keyed by media ID, with usage details for each requested item.
  */
 export async function mediaUsageForIds(
   db: D1Database,
@@ -117,9 +118,10 @@ export interface UsageLink {
 }
 
 /**
- * Where a media item is used, as admin links. Deleting is refused while any of
- * these exist, so the answer to "why can't I remove this?" should be one click
- * away rather than a name the admin has to go hunting for.
+ * Creates administrative links for each product, page, and store logo reference.
+ *
+ * @param usage - Media references to convert into administrative links
+ * @returns Links for editing referencing products and pages or changing the store logo
  */
 export function usageLinks(usage: MediaUsage): UsageLink[] {
   return [
@@ -149,7 +151,12 @@ export function usageLinks(usage: MediaUsage): UsageLink[] {
   ];
 }
 
-/** Human-readable "why can't I delete this" message. */
+/**
+ * Describes the products, pages, and store logo that reference media.
+ *
+ * @param usage - The media usage references to describe
+ * @returns A human-readable usage message, or an empty string when there are no references
+ */
 export function describeUsage(usage: MediaUsage): string {
   const parts: string[] = [];
   if (usage.products.length > 0) {

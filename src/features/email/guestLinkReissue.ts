@@ -5,12 +5,12 @@ import type { EmailMessage } from "./provider";
 import { PALETTE, emailShell, emailButton, escapeHtml } from "./layout";
 
 /**
- * Build the guest-link reissue email. Sent when support rotates an order's
- * access token (a reported forwarded/leaked link): the previous links stop
- * working the moment the rotation lands, so this message is the only path the
- * replacement credential is allowed to travel — admin output never shows it.
- * `guestOrderUrl` is the tokenized /order/<token> link, an allowlisted
- * customer-email token position. `order.email` must be set.
+ * Creates an email containing a replacement guest access link for an order.
+ *
+ * @param order - The order receiving the replacement link
+ * @param storeName - The store name displayed in the email
+ * @param guestOrderUrl - The replacement URL for accessing the order
+ * @returns An email message addressed to the order's email address
  */
 export function guestLinkReissueEmail(
   order: Order,

@@ -35,7 +35,12 @@ export const PUBLIC_ID_TOKEN_LENGTH = 10;
 
 const TOKEN_RE = /^[0-9abcdefghjkmnpqrstvwxyz]{10}$/;
 
-/** 256 is divisible by 32, so masking a random byte to 5 bits stays uniform. */
+/**
+ * Generates a public ID for the specified record type.
+ *
+ * @param kind - The record type used to select the ID prefix
+ * @returns A prefixed public ID containing a random 10-character token
+ */
 export function generatePublicId(kind: PublicIdKind): string {
   const bytes = crypto.getRandomValues(new Uint8Array(PUBLIC_ID_TOKEN_LENGTH));
   let token = "";
@@ -44,10 +49,11 @@ export function generatePublicId(kind: PublicIdKind): string {
 }
 
 /**
- * Normalize + strictly validate a public ID of the expected kind.
- * Returns the canonical lowercase form, or null when the prefix, length, or
- * alphabet is wrong — a variant ID can never pass where a product ID is
- * expected.
+ * Validates and normalizes a public ID for the specified kind.
+ *
+ * @param value - The value to validate.
+ * @param kind - The public ID category whose prefix is required.
+ * @returns The canonical lowercase public ID, or `null` if the value is invalid.
  */
 export function parsePublicId(value: unknown, kind: PublicIdKind): string | null {
   if (typeof value !== "string") return null;
@@ -73,13 +79,25 @@ export function publicIdToken(publicId: string, kind: PublicIdKind): string | nu
 const LEGACY_HEX32_RE = /^[0-9a-f]{32}$/;
 const LEGACY_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
+/**
+ * Determines whether a value is a legacy public ID.
+ *
+ * @param value - The value to classify.
+ * @returns `true` if the value is a trimmed 32-character hexadecimal ID or UUID-shaped ID, `false` otherwise.
+ */
 export function isLegacyPublicId(value: unknown): value is string {
   if (typeof value !== "string") return false;
   const v = value.trim().toLowerCase();
   return LEGACY_HEX32_RE.test(v) || LEGACY_UUID_RE.test(v);
 }
 
-/** Accepts the new prefixed form or a preserved legacy shape (orders/refunds). */
+/**
+ * Parses an order or refund identifier in the current or legacy format.
+ *
+ * @param value - The value to parse.
+ * @param kind - The record type associated with the identifier.
+ * @returns The canonical lowercase identifier, or `null` if the value is invalid.
+ */
 export function parseOrderOrLegacyPublicId(
   value: unknown,
   kind: "order" | "refund",
@@ -112,7 +130,12 @@ export function truncatePublicId(value: string, kind: PublicIdKind): string {
   return `${value.slice(0, width - 1)}\u2026`;
 }
 
-/** True when an insert failed on a public_id unique index (retry with a fresh ID). */
+/**
+ * Determines whether an error message indicates a unique constraint conflict involving a public identifier or access token.
+ *
+ * @param err - The value to inspect.
+ * @returns `true` if the value is an error with a matching conflict message, `false` otherwise.
+ */
 export function isPublicIdConflict(err: unknown): boolean {
   return (
     err instanceof Error &&

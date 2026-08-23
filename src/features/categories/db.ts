@@ -31,20 +31,42 @@ export interface CategoryFields {
   parent_id: number | null;
 }
 
+/**
+ * Lists all categories in alphabetical order by name.
+ *
+ * @returns The matching categories, or an empty array when no categories exist.
+ */
 export async function listCategories(db: D1Database): Promise<Category[]> {
   const { results } = await db.prepare("SELECT * FROM categories ORDER BY name").all<Category>();
   return results ?? [];
 }
 
+/**
+ * Retrieves a category by its numeric ID.
+ *
+ * @param id - The category's numeric ID
+ * @returns The matching category, or `null` when no category is found
+ */
 export async function getCategory(db: D1Database, id: number): Promise<Category | null> {
   return db.prepare("SELECT * FROM categories WHERE id = ?").bind(id).first<Category>();
 }
 
+/**
+ * Retrieves a category by its slug.
+ *
+ * @param slug - The category slug to search for
+ * @returns The matching category, or `null` if no category has the slug
+ */
 export async function getCategoryBySlug(db: D1Database, slug: string): Promise<Category | null> {
   return db.prepare("SELECT * FROM categories WHERE slug = ?").bind(slug).first<Category>();
 }
 
-/** Category by its prefixed public ID (boundary resolution; null if missing). */
+/**
+ * Retrieves a category by its prefixed public ID.
+ *
+ * @param publicId - The category's prefixed public identifier
+ * @returns The matching category, or `null` if no category exists with that ID
+ */
 export async function getCategoryByPublicId(
   db: D1Database,
   publicId: string,
@@ -69,6 +91,12 @@ export async function getCategoriesByPublicIds(
   return results ?? [];
 }
 
+/**
+ * Creates a category with a generated public ID.
+ *
+ * @param c - The category fields to store
+ * @returns The database ID of the created category
+ */
 export async function createCategory(db: D1Database, c: CategoryFields): Promise<number> {
   return withPublicId("category", async (publicId) => {
     const row = await db
@@ -81,6 +109,12 @@ export async function createCategory(db: D1Database, c: CategoryFields): Promise
   });
 }
 
+/**
+ * Updates the name, slug, and parent category of a category.
+ *
+ * @param id - The numeric ID of the category to update
+ * @param c - The category fields to save
+ */
 export async function updateCategory(db: D1Database, id: number, c: CategoryFields): Promise<void> {
   await db
     .prepare("UPDATE categories SET name = ?, slug = ?, parent_id = ? WHERE id = ?")
@@ -89,9 +123,7 @@ export async function updateCategory(db: D1Database, id: number, c: CategoryFiel
 }
 
 /**
- * Delete a category: reparent its direct children to its own parent (so the tree
- * stays connected), drop its product links, then remove it. FKs aren't enforced
- * on D1, so cleanup is explicit.
+ * Deletes a category and preserves the category hierarchy by reparenting its direct children.
  */
 export async function deleteCategory(db: D1Database, id: number): Promise<void> {
   const cat = await getCategory(db, id);
@@ -136,7 +168,11 @@ export async function ancestors(db: D1Database, id: number): Promise<Category[]>
   return results ?? [];
 }
 
-/** Direct product count per category id (products tagged with that category). */
+/**
+ * Counts products assigned directly to each category.
+ *
+ * @returns A map from category ID to its direct product count.
+ */
 export async function productCounts(db: D1Database): Promise<Map<number, number>> {
   const { results } = await db
     .prepare("SELECT category_id, COUNT(*) AS n FROM product_categories GROUP BY category_id")
@@ -159,7 +195,12 @@ export async function categoriesForProduct(db: D1Database, productId: number): P
   return results ?? [];
 }
 
-/** Categories for many products in one D1 query, keyed by product id. */
+/**
+ * Loads categories assigned to multiple products.
+ *
+ * @param productIds - Product IDs to look up; duplicate and non-integer IDs are ignored.
+ * @returns A map from each valid product ID to its assigned categories, including empty arrays for products without categories.
+ */
 export async function categoriesForProducts(
   db: D1Database,
   productIds: number[],
@@ -210,9 +251,11 @@ export async function relatedProducts(
 }
 
 /**
- * Active products sharing ≥1 category with any of `productIds`, excluding those
- * ids themselves — used to top up a sparse search-results grid with on-topic
- * items. Newest first. Returns [] when there are no source ids or the limit ≤ 0.
+ * Finds the newest active products that share at least one category with the specified products.
+ *
+ * @param productIds - IDs of the source products whose categories determine the results
+ * @param limit - Maximum number of products to return
+ * @returns Active products ordered from newest to oldest, excluding the source products
  */
 export async function productsInSharedCategories(
   db: D1Database,
@@ -281,7 +324,12 @@ export async function productsInCategory(
   return results ?? [];
 }
 
-/** Total active products in a category + its descendants (for pagination). */
+/**
+ * Counts active products assigned to a category or any of its descendants.
+ *
+ * @param categoryId - The category whose subtree is counted
+ * @returns The number of distinct active products in the category subtree
+ */
 export async function countProductsInCategory(db: D1Database, categoryId: number): Promise<number> {
   const row = await db
     .prepare(

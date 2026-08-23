@@ -15,6 +15,13 @@
  */
 const PREFIX = "v1";
 
+/**
+ * Computes an HMAC-SHA-256 digest for a message.
+ *
+ * @param key - The secret key used to authenticate the message
+ * @param message - The message to authenticate
+ * @returns The digest encoded as a lowercase hexadecimal string
+ */
 async function hmacHex(key: string, message: string): Promise<string> {
   const k = await crypto.subtle.importKey(
     "raw",
@@ -53,7 +60,14 @@ export async function signSession(
   return `${payload}.${await hmacHex(signingKey, payload)}`;
 }
 
-/** True only if the signature verifies, the credential tag matches, AND it's unexpired. */
+/**
+ * Validates an admin session token against its signing key, credential, and expiration time.
+ *
+ * @param token - The session token to validate
+ * @param credential - The current admin credential used to verify the credential tag
+ * @param nowSeconds - The current Unix timestamp in seconds
+ * @returns `true` if the token is valid and unexpired, `false` otherwise
+ */
 export async function verifySession(
   token: string | null | undefined,
   signingKey: string,

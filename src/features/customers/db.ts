@@ -13,7 +13,14 @@ export interface CustomerSummary {
   last_order: string;
 }
 
-/** Distinct customers (by email) with order count, lifetime value, last order. */
+/**
+ * Lists customers with order counts, non-refunded lifetime values, and most recent order dates.
+ *
+ * @param orderBy - SQL expression used to sort the customer summaries
+ * @param limit - Maximum number of customers to return
+ * @param offset - Number of customers to skip before returning results
+ * @returns Customer summaries for orders associated with non-empty email addresses
+ */
 export async function listCustomers(
   db: D1Database,
   orderBy = "lifetime_cents DESC",

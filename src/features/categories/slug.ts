@@ -2,8 +2,11 @@ import type { D1Database } from "@cloudflare/workers-types";
 import { slugify } from "../products/slug";
 
 /**
- * Return a slug unique across categories, appending -2, -3, … on collision.
- * Pass excludeId when updating so a category doesn't collide with itself.
+ * Generates a category slug that is available in the `categories` table.
+ *
+ * @param base - The text to convert into a slug
+ * @param excludeId - The category ID to exclude when checking for an existing slug
+ * @returns The first available slug, appending numeric suffixes when necessary
  */
 export async function uniqueCategorySlug(
   db: D1Database,

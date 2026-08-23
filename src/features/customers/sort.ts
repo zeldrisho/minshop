@@ -7,7 +7,13 @@ const COLUMNS: Record<string, string> = {
   last: "last_order",
 };
 
-/** Build a safe `ORDER BY` clause for the customers view from query params. */
+/**
+ * Builds a safe customer-view `ORDER BY` clause from sort and direction parameters.
+ *
+ * @param sort - The public sort name; unrecognized or missing values default to lifetime.
+ * @param dir - The sort direction; only `asc` and `desc` are accepted, defaulting to `DESC`.
+ * @returns A validated `ORDER BY` expression with case-insensitive email sorting and an email tiebreaker for other columns.
+ */
 export function orderByClause(sort: string | null, dir: string | null): string {
   const col = (sort && COLUMNS[sort]) || "lifetime_cents";
   const d = dir?.toLowerCase() === "asc" ? "ASC" : dir?.toLowerCase() === "desc" ? "DESC" : "DESC";

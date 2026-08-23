@@ -7,7 +7,13 @@ const CORS = {
   "access-control-allow-methods": "GET, OPTIONS",
 } as const;
 
-/** JSON response with open CORS, pretty-printed for human + agent readability. */
+/**
+ * Creates a pretty-printed JSON response with the specified HTTP status and shared CORS headers.
+ *
+ * @param data - The value to serialize as JSON
+ * @param status - The HTTP response status
+ * @returns A JSON response containing the serialized data
+ */
 export function catalogJson(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data, null, 2), {
     status,

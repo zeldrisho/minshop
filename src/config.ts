@@ -165,6 +165,12 @@ export type DeepPartial<T> = T extends readonly unknown[]
     ? { [K in keyof T]?: DeepPartial<T[K]> }
     : T;
 
+/**
+ * Determines whether a value is a non-null object that is not an array.
+ *
+ * @param v - The value to inspect
+ * @returns `true` if `v` is a plain object, `false` otherwise.
+ */
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
@@ -184,7 +190,11 @@ function deepMerge<T>(base: T, override: DeepPartial<T>): T {
   return out as T;
 }
 
-/** Upstream defaults. Don't edit these per-store — override in `store.config.ts`. */
+/**
+ * Builds the default site configuration, applying supported environment variable overrides.
+ *
+ * @returns The default store-wide site configuration
+ */
 function defaultConfig(): SiteConfig {
   return {
     storeName: env.STORE_NAME ?? "My Shop",
@@ -288,10 +298,12 @@ export function formatPrice(cents: number, currency: string = getConfig().curren
 }
 
 /**
- * Format a stored UTC timestamp in the configured time zone. Accepts SQLite's
- * `datetime('now')` format ("YYYY-MM-DD HH:MM:SS", UTC) or any ISO string;
- * returns '' for null/empty and the raw input if it can't be parsed. Single
- * source of truth for date display in the admin.
+ * Formats a UTC timestamp for display in a specified time zone.
+ *
+ * @param value - A SQLite UTC timestamp, ISO timestamp, or an empty value
+ * @param opts - Date and time formatting options
+ * @param timeZone - The time zone used for formatting; defaults to the configured store time zone
+ * @returns The localized date and time, an empty string for missing values, or the original input when parsing fails
  */
 export function formatDate(
   value: string | null | undefined,

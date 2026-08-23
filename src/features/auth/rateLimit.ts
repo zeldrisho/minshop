@@ -2,7 +2,14 @@ import type { RateLimit } from "@cloudflare/workers-types";
 
 export type RateLimitBucket = "auth" | "checkout" | "search";
 
-/** Public routes that can spend scarce resources or amplify credential abuse. */
+/**
+ * Classifies a request by the rate-limit bucket applicable to its route and method.
+ *
+ * @param method - The HTTP method.
+ * @param pathname - The request route pathname.
+ * @param hasSearchQuery - Whether the request includes a search query.
+ * @returns The applicable rate-limit bucket, or `null` when no bucket applies.
+ */
 export function rateLimitBucket(
   method: string,
   pathname: string,
@@ -24,16 +31,25 @@ export function rateLimitBucket(
 }
 
 /**
- * Anonymous auth and checkout requests have no trustworthy user id yet. Scope the
- * edge counter to the store + route + connecting client. The route keeps login
- * and checkout budgets independent; the host prevents shared namespace ids from
- * coupling separately provisioned stores in one Cloudflare account.
+ * Creates a rate-limit key scoped to the request host, route, and client address.
+ *
+ * @param request - The request whose host and client address are used
+ * @param pathname - The route pathname to include in the key
+ * @returns A key combining the host, pathname, and client address, using `unknown-client` when the address is unavailable
  */
 export function anonymousRateLimitKey(request: Request, pathname: string): string {
   const client = request.headers.get("cf-connecting-ip")?.trim() || "unknown-client";
   return `${new URL(request.url).hostname}:${pathname}:${client}`;
 }
 
+/**
+ * Determines whether a request is permitted by the configured rate limiter.
+ *
+ * @param limiter - The rate limiter binding, if available.
+ * @param request - The incoming request.
+ * @param pathname - The route pathname used to generate the rate-limit key.
+ * @returns `true` if no limiter is configured or the request is permitted, `false` otherwise.
+ */
 export async function checkRateLimit(
   limiter: RateLimit | undefined,
   request: Request,
@@ -47,6 +63,12 @@ export async function checkRateLimit(
   return result.success;
 }
 
+/**
+ * Creates a rate-limit response for an API or page route.
+ *
+ * @param pathname - The request pathname used to determine the response format and CORS headers
+ * @returns A non-cacheable `429` response with a 60-second retry interval
+ */
 export function rateLimitedResponse(pathname: string): Response {
   const api = pathname.startsWith("/api/");
   return new Response(

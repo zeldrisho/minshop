@@ -47,15 +47,12 @@ const SWEEP_MIN_AGE_SECONDS = 120;
 const SWEEP_BATCH = 3;
 
 /**
- * Remember the origin this store is served from.
+ * Stores the request origin for use in customer-facing order links.
  *
- * The scheduled sweep has no request to read an origin off, but emails contain
- * customer-facing order links, so it cannot be guessed — a wrong one ships dead
- * links in real mail. Rather than add a deploy-time field (which this project
- * deliberately avoids: a free-form URL is exactly the typo a wizard would have
- * caught), the origin is learned from live traffic and reused by the cron.
+ * Origins must begin with `http://` or `https://`. Persistence errors are logged
+ * and do not interrupt notification delivery.
  *
- * Written only when it actually changes, so the common case costs one read.
+ * @param origin - The store origin to remember
  */
 export async function rememberStoreUrl(db: D1Database, origin: string): Promise<void> {
   if (!/^https?:\/\//.test(origin)) return;
@@ -69,10 +66,14 @@ export async function rememberStoreUrl(db: D1Database, origin: string): Promise<
 }
 
 /**
- * Deliver whatever undelivered notifications an order still has. Safe to call
- * from anywhere, any number of times — the claim makes repeats no-ops. This is
- * what closes the old redelivery gap: a webhook retry that finds the order
- * already recorded calls this instead of returning with the emails unsent.
+ * Delivers all supported undelivered notifications for an order.
+ *
+ * Claims each notification to prevent concurrent delivery, skips inapplicable
+ * notifications, and leaves delivery failures retryable.
+ *
+ * @param orderId - The order whose notifications should be delivered
+ * @param origin - The request origin used to construct links in email messages
+ * @param settings - Optional store settings to use for this delivery pass
  */
 export async function deliverOrderNotifications(
   db: D1Database,
@@ -214,10 +215,9 @@ export async function deliverOrderNotifications(
 }
 
 /**
- * Recover a few stale rows: expired-lease claims from dead deliverers, and
- * pending rows old enough that their own settlement clearly isn't coming back
- * for them. Piggybacks on live settlements (no cron in the Astro worker yet),
- * so it is deliberately tiny — a backlog drains a little on every sale.
+ * Recovers stale order notifications and reconciles abandoned guest access records.
+ *
+ * @param origin - The request origin used when delivering recovered notifications
  */
 export async function sweepStaleNotifications(db: D1Database, origin: string): Promise<void> {
   // Piggyback the guest-credential reconciliation here too: same cadence and

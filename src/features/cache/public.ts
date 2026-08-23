@@ -1,6 +1,12 @@
 export const PUBLIC_CACHE_CONTROL = "public, max-age=0, s-maxage=600";
 export const PRIVATE_CACHE_CONTROL = "private, no-store";
 
+/**
+ * Determines whether a pathname targets the public product catalog API.
+ *
+ * @param pathname - The request pathname to classify
+ * @returns `true` if the pathname is the product catalog endpoint or a nested product API path, `false` otherwise.
+ */
 export function isPublicCatalogApi(pathname: string): boolean {
   return pathname === "/api/products" || pathname.startsWith("/api/products/");
 }
@@ -23,9 +29,10 @@ export function isPublicStorefrontPath(pathname: string): boolean {
 }
 
 /**
- * Pages/endpoints whose response can contain shopper, payment, or admin data.
- * Their policy is authoritative: responseCacheControl deliberately replaces
- * any route-set directive with private, no-store on every response path.
+ * Identifies paths that may expose private shopper, payment, order, cart, checkout, admin, or internal data.
+ *
+ * @param pathname - The request pathname to classify
+ * @returns `true` if the pathname is private, `false` otherwise.
  */
 export function isPrivatePath(pathname: string): boolean {
   return (

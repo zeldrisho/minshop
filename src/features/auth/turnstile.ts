@@ -32,9 +32,12 @@ export async function verifyConfiguredTurnstile(
 }
 
 /**
- * Verify a Turnstile token against siteverify. Returns true only on
- * `success: true`. Never throws — any error (network, bad JSON) → false, so a
- * verification failure fails closed.
+ * Verifies a Turnstile token with Cloudflare.
+ *
+ * @param token - The token submitted by the client
+ * @param secret - The Turnstile secret key
+ * @param remoteIp - The client's IP address, when available
+ * @returns `true` if verification succeeds, `false` otherwise
  */
 export async function verifyTurnstileToken(
   token: string | null | undefined,

@@ -44,9 +44,12 @@ export function guestLinkReissueKind(generation: number): GuestLinkReissueKind {
 }
 
 /**
- * Queue one notification row outside the settlement batch (reissue). INSERT OR
- * IGNORE: the (order_id, kind) PK makes a repeat of the SAME versioned kind a
- * no-op, which is exactly the idempotency the versioned kind exists to scope.
+ * Queues a notification for an order.
+ *
+ * Repeated requests for the same order and notification kind are ignored.
+ *
+ * @param orderId - The order to notify
+ * @param kind - The notification kind to queue
  */
 export async function queueNotification(
   db: D1Database,
@@ -60,9 +63,10 @@ export async function queueNotification(
 }
 
 /**
- * Every kind an order could still deliver: pending, or processing with an
- * expired lease. The deliverer iterates THIS rather than the fixed kind list so
- * versioned reissue rows are picked up by the same claim/send/mark machinery.
+ * Lists an order's pending notifications and processing notifications with expired leases.
+ *
+ * @param orderId - The order whose undelivered notification kinds are listed
+ * @returns Notification kinds ordered by creation time and kind
  */
 export async function listUndeliveredKinds(db: D1Database, orderId: number): Promise<string[]> {
   const { results } = await db
@@ -162,10 +166,13 @@ export async function markNotificationSkipped(
 }
 
 /**
- * Failure: release for retry, or park as 'dead' once attempts are exhausted
- * (or immediately, for conditions no retry can cure — `terminal`). `attempts`
- * is always the claim's own number: it is the fencing token, never a way to
- * force a state.
+ * Records a notification delivery failure and schedules it for retry or marks it as permanently failed.
+ *
+ * @param orderId - The order containing the notification
+ * @param kind - The notification kind
+ * @param attempts - The claim attempt number used to fence stale workers
+ * @param error - The failure to record
+ * @param terminal - Whether the failure should be marked permanent
  */
 export async function markNotificationFailed(
   db: D1Database,

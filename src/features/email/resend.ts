@@ -1,9 +1,11 @@
 import type { EmailProvider, EmailMessage } from "./provider";
 
 /**
- * Resend adapter — a plain HTTPS call to the Resend API, so it works on the
- * Workers free plan (no `send_email` binding / paid plan needed). Get a free API
- * key at resend.com and paste it in Admin → Settings → Email (stored in the vault).
+ * Creates an email provider that sends messages through the Resend API.
+ *
+ * @param apiKey - Resend API key used for authentication
+ * @param from - Sender email address and optional display name
+ * @returns An email provider configured to send from the specified address
  */
 export function createResendEmail(
   apiKey: string,

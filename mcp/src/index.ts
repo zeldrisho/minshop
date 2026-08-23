@@ -38,6 +38,11 @@ import {
 } from "../../src/features/ids/publicId";
 import type { D1Database } from "@cloudflare/workers-types";
 
+/**
+ * Compares two strings using a timing-safe equality check.
+ *
+ * @returns `true` if the strings match, `false` otherwise.
+ */
 async function secureEqual(provided: string, expected: string): Promise<boolean> {
   const encoder = new TextEncoder();
   const [providedHash, expectedHash] = await Promise.all([
@@ -76,6 +81,12 @@ function requirePublicId(publicId: string | null, rowId: number, kind: string): 
   return publicId;
 }
 
+/**
+ * Converts a product record into a public product representation.
+ *
+ * @param p - The product record to project
+ * @returns A product object containing public identifiers, catalog details, inventory, shipping information, and creation time
+ */
 function productDto(p: Product) {
   return {
     id: requirePublicId(p.public_id, p.id, "product"),
@@ -161,7 +172,12 @@ function refundDto(r: Refund) {
 // errors. Numeric row IDs are rejected outright, never resolved.
 // ---------------------------------------------------------------------------
 
-/** Resolve a `prod_…` public ID or slug (convenience) to a product row. */
+/**
+ * Resolves a product by public ID or slug.
+ *
+ * @param id - A product public ID, slug, or numeric row ID
+ * @returns The matching product, `null` if no product matches, or `"numeric"` for a numeric row ID
+ */
 async function resolveProduct(db: D1Database, id: string): Promise<Product | null | "numeric"> {
   const trimmed = id.trim();
   if (/^\d+$/.test(trimmed)) return "numeric";

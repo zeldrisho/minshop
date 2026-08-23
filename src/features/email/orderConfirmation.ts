@@ -26,7 +26,12 @@ const thumbCell = (
   return `<td style="width:60px;padding:10px 0;border-bottom:1px solid ${PALETTE.line};"><img src="${escapeHtml(src)}" width="48" height="48" alt="" style="display:block;border-radius:4px;object-fit:cover;background:${PALETTE.paper};" /></td>`;
 };
 
-/** Shipping / discount / tax / total, in the order they appear on a receipt. */
+/**
+ * Builds receipt rows for shipping, discounts, tax, and the order total.
+ *
+ * @param money - Formats an amount in cents for display
+ * @returns Receipt rows in display order, omitting zero-valued optional charges
+ */
 function totalRows(order: Order, money: (cents: number) => string): TotalRow[] {
   return [
     ...(order.shipping_cents > 0
@@ -56,8 +61,10 @@ function formatShipAddress(order: Order): string {
 }
 
 /**
- * Build the order-confirmation email for a paid order. `order.email` must be set.
- * `baseUrl` is the site origin (e.g. https://shop.example.com) for the order link.
+ * Creates a paid-order confirmation email with item details, charges, totals, and optional order or download links.
+ *
+ * @param guestOrderUrl - Tokenized guest link for viewing the order; omit or set to `null` to exclude the link.
+ * @returns The order-confirmation email message addressed to the customer
  */
 export function orderConfirmationEmail(
   order: Order,
@@ -122,8 +129,15 @@ export function orderConfirmationEmail(
 }
 
 /**
- * Build the store-owner "new order" notification. `to` is the owner address;
- * `baseUrl` is the site origin for the admin order link.
+ * Builds a store-owner notification containing the new order details and an admin link.
+ *
+ * @param order - The order to include in the notification
+ * @param items - The products included in the order
+ * @param to - The store owner's email address
+ * @param baseUrl - The site origin used to construct the admin order link
+ * @param storeName - The store name included in the email
+ * @param imageDelivery - The configured product image delivery mode
+ * @returns The store-owner order notification email
  */
 export function orderNotificationEmail(
   order: Order,
@@ -193,7 +207,14 @@ export function orderNotificationEmail(
   };
 }
 
-/** Build the "your order has shipped" email. `order.email` must be set. */
+/**
+ * Builds a shipment notification email for an order.
+ *
+ * @param order - The shipped order, including its recipient email address
+ * @param storeName - The store name displayed in the email
+ * @param guestOrderUrl - Optional tokenized URL for viewing the order
+ * @returns The shipment notification email message
+ */
 export function orderShippedEmail(
   order: Order,
   storeName: string,
@@ -256,12 +277,12 @@ export function orderShippedEmail(
 }
 
 /**
- * Refund notice. Sent once per newly recognised refund — the amount the total
- * just advanced by, not the cumulative total — so a partial refund followed by
- * another reads as two distinct amounts rather than one growing number.
+ * Builds an email notification for a partial or full order refund.
  *
- * `refundedCents` is the running total, shown only when it differs from this
- * refund, i.e. when there was an earlier one.
+ * @param refundCents - The amount refunded in this transaction, in the order's currency
+ * @param refundedCents - The cumulative amount refunded for the order, in cents
+ * @param guestOrderUrl - Optional link for guests to view their order
+ * @returns The refund notification email
  */
 export function orderRefundedEmail(
   order: Order,

@@ -19,6 +19,12 @@ export interface ImageDimensions {
 /** Enough for every header below; WebP's VP8X sits within the first 30 bytes. */
 export const HEADER_BYTES = 64 * 1024;
 
+/**
+ * Reads the dimensions of a PNG, GIF, WebP, or JPEG image.
+ *
+ * @param bytes - The image data to inspect
+ * @returns The image width and height, or `null` if the format is unsupported or invalid
+ */
 export function readImageDimensions(bytes: Uint8Array): ImageDimensions | null {
   return png(bytes) ?? gif(bytes) ?? webp(bytes) ?? jpeg(bytes);
 }
@@ -47,10 +53,12 @@ function gif(b: Uint8Array): ImageDimensions | null {
 }
 
 /**
- * WebP: "RIFF" .... "WEBP", then one of three chunk layouts.
- *   VP8  — lossy: dimensions are 14-bit values after a 3-byte start code.
- *   VP8L — lossless: 14-bit width/height packed into 32 bits, minus one.
- *   VP8X — extended: 24-bit canvas size, minus one.
+ * Extracts dimensions from a WebP image.
+ *
+ * Supports lossy, lossless, and extended WebP chunk layouts.
+ *
+ * @param b - The encoded WebP image data
+ * @returns The image dimensions, or `null` if the data is invalid or unsupported
  */
 function webp(b: Uint8Array): ImageDimensions | null {
   if (!matches(b, 0, [0x52, 0x49, 0x46, 0x46]) || !matches(b, 8, [0x57, 0x45, 0x42, 0x50])) {

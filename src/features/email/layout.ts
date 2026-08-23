@@ -67,8 +67,10 @@ export interface ShellOptions {
 }
 
 /**
- * Wrap content in the branded shell: store wordmark, white card on paper, footer.
- * `body` is inserted as-is, so callers escape their own interpolations.
+ * Wraps email content in a branded layout with the store name, heading, optional subheading, and footer.
+ *
+ * @param options - The branded shell content and optional HTML sections. `body`, `subheading`, and `footer` are inserted as supplied.
+ * @returns The complete branded email HTML
  */
 export function emailShell({ storeName, heading, subheading, body, footer }: ShellOptions): string {
   return `<div style="margin:0;padding:24px 12px;background:${PALETTE.paper};font-family:${SANS};color:${PALETTE.text};-webkit-font-smoothing:antialiased;">
@@ -108,7 +110,13 @@ export interface TotalRow {
   strong?: boolean;
 }
 
-/** Line items with a right-aligned totals block beneath them. */
+/**
+ * Builds an HTML table of line items followed by a right-aligned totals block.
+ *
+ * @param items - The line items to display.
+ * @param totals - The totals to display beneath the line items.
+ * @returns The rendered HTML tables.
+ */
 export function emailItemsTable(items: LineItem[], totals: TotalRow[]): string {
   const rows = items
     .map(

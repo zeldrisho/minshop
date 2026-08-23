@@ -25,6 +25,12 @@ export function clearAccessCache(): void {
   jwksCache.clear();
 }
 
+/**
+ * Decodes a Base64URL-encoded string into bytes.
+ *
+ * @param s - The Base64URL-encoded string
+ * @returns The decoded bytes
+ */
 function b64urlToBytes(s: string): Uint8Array<ArrayBuffer> {
   const pad = s.length % 4 === 0 ? "" : "=".repeat(4 - (s.length % 4));
   const bin = atob(s.replace(/-/g, "+").replace(/_/g, "/") + pad);
@@ -33,10 +39,24 @@ function b64urlToBytes(s: string): Uint8Array<ArrayBuffer> {
   return out;
 }
 
+/**
+ * Decodes a Base64URL-encoded JSON segment.
+ *
+ * @param seg - The encoded segment to decode
+ * @returns The parsed JSON value
+ */
 function decodeSegment<T>(seg: string): T {
   return JSON.parse(new TextDecoder().decode(b64urlToBytes(seg))) as T;
 }
 
+/**
+ * Retrieves the signing keys for a Cloudflare Access team domain.
+ *
+ * @param teamDomain - The team domain used to locate the Access certificates endpoint
+ * @param force - Whether to bypass the cached keys
+ * @returns The available JSON Web Keys
+ * @throws If the Access certificates request fails
+ */
 async function fetchKeys(teamDomain: string, force: boolean): Promise<Jwk[]> {
   const base = teamDomain.replace(/\/$/, "");
   const cached = jwksCache.get(base);

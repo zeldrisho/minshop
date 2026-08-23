@@ -8,6 +8,12 @@ export interface ParsedCategoryForm {
   parentPublicId: string | null;
 }
 
+/**
+ * Parses and validates category form fields.
+ *
+ * @param form - Form data containing the category name, slug, and optional parent category public ID
+ * @returns The parsed category fields, or an error message when the name or parent category is invalid
+ */
 export function parseCategoryForm(
   form: FormData,
 ): { data: ParsedCategoryForm } | { error: string } {

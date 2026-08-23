@@ -4,6 +4,11 @@ export const DEPLOY_PURGE_WINDOW_SECONDS = 5 * 60;
 
 const encoder = new TextEncoder();
 
+/**
+ * Creates an HMAC-SHA-256 signature for a message.
+ *
+ * @returns The signature encoded as lowercase hexadecimal.
+ */
 async function hmacHex(secret: string, message: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     "raw",
@@ -16,6 +21,11 @@ async function hmacHex(secret: string, message: string): Promise<string> {
   return [...new Uint8Array(signature)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+/**
+ * Compares two strings using a constant-time comparison.
+ *
+ * @returns `true` if the strings match, `false` otherwise.
+ */
 async function constantTimeEqual(left: string, right: string): Promise<boolean> {
   const [leftHash, rightHash] = await Promise.all([
     crypto.subtle.digest("SHA-256", encoder.encode(left)),
