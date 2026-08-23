@@ -20,6 +20,13 @@ import { toMajorUnits } from "../../money";
  */
 const DEFAULT_BASE = "https://api.opennode.com";
 
+/**
+ * Computes an HMAC-SHA-256 digest for a message.
+ *
+ * @param key - The secret key used to authenticate the message
+ * @param message - The message to authenticate
+ * @returns The digest encoded as a lowercase hexadecimal string
+ */
 async function hmacSha256Hex(key: string, message: string): Promise<string> {
   const k = await crypto.subtle.importKey(
     "raw",
@@ -32,6 +39,14 @@ async function hmacSha256Hex(key: string, message: string): Promise<string> {
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/**
+ * Creates an OpenNode payment provider for checkout creation and webhook verification.
+ *
+ * @param db - The D1 database used to persist pending payment data
+ * @param apiKey - The OpenNode API key used for charge requests and webhook verification
+ * @param baseUrl - The OpenNode API base URL
+ * @returns A configured OpenNode payment provider
+ */
 export function createOpenNodeProvider(
   db: D1Database,
   apiKey: string,

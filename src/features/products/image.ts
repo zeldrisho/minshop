@@ -30,6 +30,12 @@ export interface ProductImageSources {
   sizes?: string;
 }
 
+/**
+ * Determines whether on-demand image delivery can use the specified base URL.
+ *
+ * @param baseUrl - The URL to validate as the image delivery origin
+ * @returns `true` if `baseUrl` is an HTTPS URL with a hostname, `false` otherwise.
+ */
 export function onDemandImageDeliveryAvailable(baseUrl: string): boolean {
   try {
     const url = new URL(baseUrl);
@@ -40,15 +46,11 @@ export function onDemandImageDeliveryAvailable(baseUrl: string): boolean {
 }
 
 /**
- * Public URL for a product's image — the R2-served object, or the shared
- * placeholder when the product has none. Single source of truth for the
- * image/placeholder fallback, used by both the storefront and the Stripe line
- * items.
+ * Builds the public URL for a product image, or the shared placeholder when no image key is provided.
  *
- * With `baseUrl` set (config.images.baseUrl, from IMAGE_BASE_URL — e.g. an R2
- * custom domain) it returns an absolute URL that bypasses the Worker's /images
- * route; otherwise a root-relative `/images/...` path (prefix with the origin
- * for an absolute URL where one is required, e.g. Stripe/email).
+ * @param imageKey - The stored media object key, or `null` when the product has no image
+ * @param baseUrl - Optional base URL used to produce an absolute media URL
+ * @returns The product image URL or `/placeholder.png`
  */
 export function productImageUrl(imageKey: string | null, baseUrl = ""): string {
   if (!imageKey) return "/placeholder.png";
@@ -73,6 +75,13 @@ const TRANSFORMABLE_KEY = /^(?:products|media)\/[A-Za-z0-9][A-Za-z0-9._/-]*$/;
  *  pre-warmed cache entries are byte-identical to the URLs pages emit. */
 const TRANSFORM_OPTIONS = "fit=scale-down,format=auto,quality=82,onerror=redirect";
 
+/**
+ * Builds an absolute source URL for a valid store image key on the configured origin.
+ *
+ * @param imageKey - The store image key to resolve
+ * @param baseUrl - The configured image origin
+ * @returns The absolute source URL, or `null` when the key or origin is invalid
+ */
 function versionedTransformSource(imageKey: string, baseUrl: string): string | null {
   // On-demand transforms require a public absolute source. Keep transformation
   // requests scoped to the store's own image prefixes on the configured origin;
@@ -95,6 +104,12 @@ function versionedTransformSource(imageKey: string, baseUrl: string): string | n
   }
 }
 
+/**
+ * Builds the Cloudflare image transformation URL prefix for an optional origin.
+ *
+ * @param transformOrigin - The HTTP or HTTPS origin for image transformations.
+ * @returns The transformation prefix, or `null` if the origin is invalid.
+ */
 function transformPrefix(transformOrigin = ""): string | null {
   if (!transformOrigin) return "/cdn-cgi/image/";
   try {
@@ -106,15 +121,25 @@ function transformPrefix(transformOrigin = ""): string | null {
   }
 }
 
+/**
+ * Builds a transformed image URL from a source path and transformation options.
+ *
+ * @param source - The image source path
+ * @param options - The transformation options segment
+ * @param transformOrigin - The origin used for image transformations
+ * @returns The transformed image URL, or `null` when the transformation origin is invalid
+ */
 function transformedUrl(source: string, options: string, transformOrigin = ""): string | null {
   const prefix = transformPrefix(transformOrigin);
   return prefix ? `${prefix}${options}/${source}` : null;
 }
 
 /**
- * Responsive product-image attributes. Original delivery is byte-for-byte the
- * existing behavior. Cloudflare delivery uses a fixed, bounded width ladder and
- * format negotiation; the browser requests only the candidate it needs.
+ * Builds responsive product-image attributes using the configured delivery mode.
+ *
+ * @param imageKey - The stored image key, or `null` when no image is available
+ * @param options - Delivery, responsive sizing, and transformation settings
+ * @returns Image attributes for the original image or responsive transformed sources
  */
 export function productImageSources(
   imageKey: string | null,
@@ -157,19 +182,14 @@ export function productImageSources(
 }
 
 /**
- * Pre-generate a fresh upload's responsive ladder so the first shopper gets
- * cache hits instead of cold transforms — a cold AVIF encode measured ~2.4s
- * per variant in production, and a catalog page requests several at once.
+ * Warms responsive image transformations for an uploaded image.
  *
- * Fetches every srcset width in the two modern Accept buckets (avif, webp) so
- * both encodings exist; `format=auto` varies its cache on Accept. Failures are
- * harmless — an unwarmed variant just falls back to a cold transform later —
- * so results are logged, never thrown. Callers run this via waitUntil.
+ * Requests each configured width for AVIF and WebP content negotiation variants.
+ * Failed requests are logged and do not cause the function to reject.
  *
- * Warms the cache of whichever colo serves the admin's upload; with zone
- * Tiered Cache that spreads further. Bills as 4 unique transformations per
- * image (one per width — format=auto's AVIF/WebP outputs count once, per
- * Images pricing) against the 5,000/month free tier.
+ * @param imageKey - The stored image key to transform
+ * @param baseUrl - The base URL used to resolve the source image
+ * @param transformOrigin - The origin that serves image transformations
  */
 export async function prewarmImageTransforms(
   imageKey: string,
@@ -200,7 +220,15 @@ export async function prewarmImageTransforms(
   }
 }
 
-/** Fixed-size JPEG thumbnail for email clients, using the same original fallback. */
+/**
+ * Builds an absolute product image URL suitable for email clients.
+ *
+ * @param imageKey - The product image key, or `null` when no image is available
+ * @param siteOrigin - The site origin used to create the absolute URL
+ * @param baseUrl - The base URL for stored product media
+ * @param delivery - The configured image delivery mode
+ * @returns A 96×96 JPEG thumbnail URL when Cloudflare delivery is available, or the original image URL otherwise
+ */
 export function productEmailImageUrl(
   imageKey: string | null,
   siteOrigin: string,

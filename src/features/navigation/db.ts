@@ -149,9 +149,12 @@ LEFT JOIN categories c  ON mi.target_type = 'category' AND c.id  = mi.target_id
 ORDER BY mi.location, mi.position, mi.id`;
 
 /**
- * Where an item points. Resolved in code, not SQL, because 'catalog' depends on
- * a store setting: the catalog lives at `/` normally and at `/products` once the
- * home page has been pointed elsewhere.
+ * Resolves a menu target to its storefront URL.
+ *
+ * @param targetType - The type of target linked by the menu item
+ * @param slug - The target slug for pages, products, or categories
+ * @param homePage - The configured custom home page path
+ * @returns The URL for the target
  */
 export function resolveMenuHref(
   targetType: MenuTargetType,
@@ -172,7 +175,12 @@ export function resolveMenuHref(
   }
 }
 
-/** Row → renderable item. `text` is the override, else the target's own name. */
+/**
+ * Converts a menu database row into a renderable menu item.
+ *
+ * @param homePage - The configured custom home page used to resolve the item URL
+ * @returns The menu item with its display text, URL, availability, and target status
+ */
 export function toMenuItem(row: MenuItemRow, homePage: string | null | undefined): MenuItem {
   return {
     id: row.id,
@@ -207,6 +215,12 @@ export function visibleItems(items: MenuItem[]): MenuItem[] {
   return items.filter((i) => i.available && i.text !== "");
 }
 
+/**
+ * Retrieves the header and footer navigation menus.
+ *
+ * @param homePage - The configured custom home page used when grouping menu items.
+ * @returns The grouped header and footer menu items.
+ */
 export async function getMenus(
   db: D1Database,
   homePage: string | null | undefined,
@@ -223,7 +237,12 @@ export const isMenuTargetType = (v: unknown): v is MenuTargetType =>
 
 export const isSingleton = (t: MenuTargetType): boolean => t === "home" || t === "catalog";
 
-/** Empty/blank overrides are stored as NULL so COALESCE does the fallback. */
+/**
+ * Normalizes a menu label by trimming whitespace, converting blank values to `null`, and limiting nonblank values to the maximum label length.
+ *
+ * @param value - The value to normalize
+ * @returns The normalized label, or `null` for blank values
+ */
 export function normalizeLabel(value: unknown): string | null {
   const text = String(value ?? "").trim();
   return text === "" ? null : text.slice(0, MAX_MENU_LABEL);
@@ -233,22 +252,10 @@ export type AddFailure = "full" | "duplicate" | "unavailable";
 export type AddResult = { ok: true; id: number } | { ok: false; reason: AddFailure };
 
 /**
- * Add one item.
+ * Adds a usable target to a menu when capacity and uniqueness rules allow it.
  *
- * Guarded single statement rather than check-then-insert: the count, the target
- * check, and the singleton check all have to hold at the moment of the write, and
- * the next position is computed in the same statement so two admin tabs cannot
- * collide on it.
- *
- * The target check is here, not only in the picker. The UI offering only
- * available targets is a convenience; a stale form, a resubmitted POST, or a
- * hand-crafted request must not be able to add a draft page or an inactive
- * product.
- *
- * The singleton check is here too, even though a partial unique index also
- * enforces it, because the index enforces it by RAISING — which reaches the
- * merchant as a 500 rather than as a sentence. The index stays as the backstop
- * for a genuine race where two requests both pass this guard.
+ * @param input - The menu location, target, and optional display label.
+ * @returns A success result with the new item ID, or a failure reason indicating that the menu is full, the target is duplicated, or the target is unavailable.
  */
 export async function addMenuItem(
   db: D1Database,
@@ -301,6 +308,14 @@ export async function addMenuItem(
   return { ok: false, reason: await diagnoseAddFailure(db, location, targetType, cap) };
 }
 
+/**
+ * Classifies why adding a menu item was rejected.
+ *
+ * @param location - The menu location being checked
+ * @param targetType - The target type of the item being added
+ * @param cap - The maximum number of items allowed at the location
+ * @returns `duplicate` for an existing singleton target, `full` when the location has reached its cap, or `unavailable` otherwise
+ */
 async function diagnoseAddFailure(
   db: D1Database,
   location: MenuLocation,
@@ -333,7 +348,12 @@ export async function getMenuItemIdByPublicId(
   return row?.id ?? null;
 }
 
-/** public_id → row id for one menu, for resolving a submitted reorder list. */
+/**
+ * Maps public menu item IDs to database row IDs for a menu location.
+ *
+ * @param location - The menu location whose items are mapped
+ * @returns A map of public menu item IDs to database row IDs
+ */
 export async function menuItemIdsByPublicId(
   db: D1Database,
   location: MenuLocation,
@@ -353,6 +373,12 @@ export async function removeMenuItem(db: D1Database, id: number): Promise<void> 
   await db.prepare("DELETE FROM menu_items WHERE id = ?").bind(id).run();
 }
 
+/**
+ * Updates the label of a menu item.
+ *
+ * @param id - The menu item's database ID
+ * @param label - The new label, or `null` to clear it
+ */
 export async function setMenuItemLabel(
   db: D1Database,
   id: number,
@@ -362,11 +388,11 @@ export async function setMenuItemLabel(
 }
 
 /**
- * Swap an item with its neighbour.
+ * Moves a menu item one position in the requested direction.
  *
- * Both writes go in one batch so a failure cannot leave two items sharing a
- * position — which would still render, but in an order the merchant did not
- * choose and cannot predict.
+ * Does nothing when the item or an adjacent item is not found.
+ *
+ * @param direction - The direction to move the item: `"up"` or `"down"`
  */
 export async function moveMenuItem(
   db: D1Database,
@@ -402,19 +428,11 @@ export async function moveMenuItem(
 }
 
 /**
- * Set the whole order of one menu from an ordered id list (drag-and-drop).
+ * Reorders all items in a menu according to an ordered ID list.
  *
- * One CASE statement per chunk rather than one UPDATE per row: 50 footer items
- * would otherwise be 50 statements, and D1 allows only 50 queries per Worker
- * invocation on the Free plan — the admin request already spends some of that.
- * Chunked at 30 because each item costs two bound parameters (one in the CASE,
- * one in the IN list) against D1's 100-parameter ceiling: 30 + 1 + 30 = 61.
- *
- * Positions are interpolated integers, not parameters — they are array indices
- * this function computes, never merchant input.
- *
- * Scoped by location, so a tampered id list cannot drag an item out of the menu
- * it belongs to.
+ * @param location - The menu location whose items are reordered
+ * @param ids - A complete, duplicate-free list of item IDs in the desired order
+ * @returns `true` if the list is valid and the order is updated, `false` otherwise
  */
 export async function reorderMenuItems(
   db: D1Database,

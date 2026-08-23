@@ -24,10 +24,12 @@ const DECLINE: Record<string, string> = {
 };
 
 /**
- * Handle a demo-checkout POST. "approve" records a genuine order (tagged
- * payment_method='demo') through the same path the real webhooks use — emails,
- * stock, revenue, confirmation — and signals settled so the caller can redirect
- * to its guest order URL. Any other outcome returns a simulated decline message.
+ * Processes a demo checkout submission and settles or declines the pending payment.
+ *
+ * @param pending - The pending payment associated with the checkout.
+ * @param form - The submitted checkout form data.
+ * @param origin - The request origin used when recording the order.
+ * @returns A settled result for approved payments or a decline message for invalid, expired, or declined submissions.
  */
 export async function settleDemoCheckout(
   pending: PendingPayment,
@@ -55,9 +57,14 @@ export async function settleDemoCheckout(
 }
 
 /**
- * Settle-on-load for Lightning: poll the node directly (authoritative, so the page
- * works even with no public webhook). Records + marks settled when paid. Returns
- * true once settled so the caller can redirect to the order page.
+ * Settles a pending Lightning payment when the checkout page loads.
+ *
+ * @param pending - The pending Lightning payment to settle
+ * @param origin - The origin used for order notification delivery
+ * @param settings - Optional store settings used for notification delivery
+ * @param waitUntil - Optional function for deferring notification delivery
+ * @returns `true` if the payment was settled, `false` if it is unavailable or unpaid
+ * @throws Error if the payment's inventory reservation is no longer active
  */
 export async function settleLightningOnLoad(
   pending: PendingPayment,

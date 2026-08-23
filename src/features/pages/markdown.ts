@@ -25,6 +25,13 @@ const md = new MarkdownIt({
 /** Root-relative media reference the editor inserts: /images/<key>. */
 const LOCAL_IMAGE_PREFIX = "/images/";
 
+/**
+ * Extracts a local media key from a root-relative or configured-base image URL.
+ *
+ * @param src - The image URL to inspect
+ * @param baseUrl - The configured base URL for images
+ * @returns The media key, or `null` when the URL does not identify a local image
+ */
 function localKeyFromSrc(src: string, baseUrl: string): string | null {
   if (src.startsWith(LOCAL_IMAGE_PREFIX)) {
     return src.slice(LOCAL_IMAGE_PREFIX.length) || null;
@@ -38,13 +45,10 @@ function localKeyFromSrc(src: string, baseUrl: string): string | null {
 }
 
 /**
- * Plain text of inline tokens, for an image's alt attribute.
+ * Extracts plain text from inline tokens for use as image alt text.
  *
- * markdown-it's own renderInlineAsText skips `text_special`, which is what an
- * escaped character becomes — so `![Photo of \[blue shirt]` rendered
- * alt="Photo of blue shirt", quietly losing the bracket. The editor has to
- * escape brackets (a bare `[` turns the image into a link), so dropping them
- * here would mean alt text can never contain one.
+ * @param tokens - Inline tokens whose textual content should be combined
+ * @returns The combined text, including escaped characters and inline code
  */
 function inlineTextOf(tokens: Token[]): string {
   return tokens
@@ -79,10 +83,10 @@ export interface RenderOptions {
 }
 
 /**
- * Rewrite local image sources through mediaUrl() and mark body images as
- * lazy/async. Bodies are stored root-relative and portable; the origin is
- * applied at render time, so changing IMAGE_BASE_URL never requires a rewrite
- * of stored content.
+ * Configures image rendering for local media URLs, accessibility text, loading behavior, and optional intrinsic dimensions.
+ *
+ * @param baseUrl - Base URL used to resolve local image keys.
+ * @param dimensions - Optional intrinsic dimensions keyed by local image key.
  */
 function installImageRule(
   instance: MarkdownItInstance,
@@ -116,6 +120,13 @@ function installImageRule(
   };
 }
 
+/**
+ * Renders Markdown to HTML with configured image handling and optional source mapping.
+ *
+ * @param markdown - The Markdown content to render
+ * @param options - Rendering options, including image URL rewriting, dimensions, and source-map attributes
+ * @returns The rendered HTML
+ */
 export function renderMarkdown(markdown: string, options: RenderOptions = {}): string {
   const baseUrl = options.baseUrl ?? "";
   const instance = new MarkdownIt({
@@ -148,9 +159,11 @@ export function renderMarkdown(markdown: string, options: RenderOptions = {}): s
 }
 
 /**
- * Plain-text summary for <meta name="description">. Derived from parsed tokens
- * rather than the raw source, so `## Heading`, `**bold**`, and link syntax don't
- * leak punctuation into the description.
+ * Creates a plain-text excerpt from Markdown for use as a description.
+ *
+ * @param markdown - The Markdown source to summarize
+ * @param maxLength - The maximum length of the resulting excerpt
+ * @returns The normalized Markdown text, truncated at a word boundary with an ellipsis when necessary
  */
 export function markdownExcerpt(markdown: string, maxLength = 160): string {
   const text = md
@@ -173,12 +186,10 @@ export function markdownExcerpt(markdown: string, maxLength = 160): string {
 }
 
 /**
- * Every distinct media key the body references, discovered from parser tokens
- * rather than a regex — a regex would also match image syntax inside a fenced
- * code block, which renders as text and is not a real reference.
+ * Extracts distinct local media keys referenced by Markdown.
  *
- * External images and links are ignored: only objects served by this store can
- * be library associations.
+ * @param options - Rendering options used to identify local image URLs
+ * @returns Local media keys in first-reference order
  */
 export function extractMediaKeys(markdown: string, options: RenderOptions = {}): string[] {
   const baseUrl = options.baseUrl ?? "";

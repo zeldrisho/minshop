@@ -38,6 +38,13 @@ export const STRIPE_UNSUPPORTED: ReadonlySet<string> = new Set([
   "VI",
 ]);
 
+/**
+ * Builds the country codes available for Stripe based on the configured coverage.
+ *
+ * @param explicit - Country codes explicitly configured for use.
+ * @param hasCatchAll - Whether all known country codes should be considered.
+ * @returns Uppercase country codes excluding those unsupported by Stripe.
+ */
 export function stripeAllowedCountries(explicit: string[], hasCatchAll: boolean): string[] {
   const codes = hasCatchAll ? COUNTRY_CODES : explicit;
   return codes.map((c) => c.toUpperCase()).filter((c) => !STRIPE_UNSUPPORTED.has(c));

@@ -10,6 +10,12 @@ const ALLOWED = new Map<string, Set<string>>([
   ["text/plain", new Set(["txt"])],
 ]);
 
+/**
+ * Validates a digital deliverable's size, MIME type, and filename extension.
+ *
+ * @param file - The deliverable file to validate
+ * @returns An error message if the file is invalid, or `null` if it is valid
+ */
 export function validateDigitalFile(file: File): string | null {
   if (file.size < 1) return "Choose a non-empty deliverable file.";
   if (file.size > MAX_FILE_BYTES) return "Deliverable files must be 25 MB or smaller.";
@@ -20,6 +26,13 @@ export function validateDigitalFile(file: File): string | null {
   return null;
 }
 
+/**
+ * Uploads a digital file under a unique storage key.
+ *
+ * @param storage - The storage provider used for the upload
+ * @param file - The file to upload
+ * @returns The storage key, original filename, MIME type, and size
+ */
 export async function uploadDigitalFile(
   storage: StorageProvider,
   file: File,

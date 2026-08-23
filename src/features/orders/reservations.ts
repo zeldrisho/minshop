@@ -61,6 +61,12 @@ export function aggregateStockTargets(items: ReservationItem[]): StockTarget[] {
   return [...targets.values()];
 }
 
+/**
+ * Parses and validates a serialized reservation item list.
+ *
+ * @param value - The JSON-encoded reservation items
+ * @returns The validated reservation items, or `null` if the value is invalid
+ */
 function parseItems(value: string): ReservationItem[] | null {
   try {
     const items = JSON.parse(value) as ReservationItem[];
@@ -94,6 +100,12 @@ function parseItems(value: string): ReservationItem[] | null {
   }
 }
 
+/**
+ * Retrieves a reservation by its public identifier.
+ *
+ * @param publicId - The reservation's public identifier
+ * @returns The matching reservation row, or `null` if no reservation is found
+ */
 async function getReservation(db: D1Database, publicId: string): Promise<ReservationRow | null> {
   return db
     .prepare(
@@ -105,6 +117,12 @@ async function getReservation(db: D1Database, publicId: string): Promise<Reserva
 
 const ITEM_ID_LOOKUP_CHUNK = 40;
 
+/**
+ * Checks whether any public item ID is already claimed in an order-item table.
+ *
+ * @param publicIds - The item IDs to check
+ * @returns `true` if any ID is claimed, `false` otherwise
+ */
 async function hasClaimedItemId(db: D1Database, publicIds: string[]): Promise<boolean> {
   for (let offset = 0; offset < publicIds.length; offset += ITEM_ID_LOOKUP_CHUNK) {
     const chunk = publicIds.slice(offset, offset + ITEM_ID_LOOKUP_CHUNK);
@@ -121,6 +139,12 @@ async function hasClaimedItemId(db: D1Database, publicIds: string[]): Promise<bo
   return false;
 }
 
+/**
+ * Resolves product database IDs to their public IDs.
+ *
+ * @param productIds - The product database IDs to resolve
+ * @returns The public IDs found for the specified products
+ */
 async function publicIdsForProducts(
   db: D1Database,
   productIds: Iterable<number>,
@@ -147,6 +171,14 @@ async function purgeTransitions(
   if (publicIds.length > 0) await purger(publicIds);
 }
 
+/**
+ * Releases an active reservation and restores its reserved stock.
+ *
+ * @param publicId - The reservation's public identifier
+ * @param terminalStatus - The terminal status to assign to the reservation
+ * @returns Whether the reservation was released and the product IDs whose visible stock changed
+ * @throws If the reservation contains an invalid item snapshot
+ */
 async function releaseReservation(
   db: D1Database,
   publicId: string,
@@ -250,7 +282,12 @@ export async function releaseExpiredReservations(
   await purgeTransitions(db, changedProductIds, purger);
 }
 
-/** Expire one locally authoritative self-rendered hold during a status read. */
+/**
+ * Expires an eligible locally rendered Lightning or Demo reservation during a status read.
+ *
+ * @param publicId - The reservation's public identifier
+ * @returns `true` if stock was released, `false` if the reservation was not eligible or had already been released
+ */
 export async function expireSelfRenderedReservation(
   db: D1Database,
   publicId: string,
@@ -275,9 +312,16 @@ export async function expireSelfRenderedReservation(
 }
 
 /**
- * Atomically claim all requested stock. The reservation row is inserted only if
- * every aggregated stock target is available; decrements are conditional on that
- * row, so a failed multi-line reservation cannot partially consume inventory.
+ * Reserves the requested inventory and creates a checkout reservation.
+ *
+ * The reservation is created only when all requested stock is available. Stock
+ * is decremented atomically with the reservation, and public item identifiers
+ * are regenerated when conflicts occur.
+ *
+ * @param items - The inventory items to reserve
+ * @param ttlSeconds - The reservation lifetime in seconds; must be at least 60
+ * @param release - The digital-delivery lifecycle release governing item ID registration
+ * @returns `true` if the reservation succeeds, `false` if the input is invalid or stock is unavailable
  */
 export async function reserveInventory(
   db: D1Database,
@@ -417,7 +461,12 @@ export interface SettlementReservation {
   status: ReservationStatus;
 }
 
-/** Load an authoritative snapshot for ordinary or late settlement. */
+/**
+ * Loads the item snapshot for a reservation eligible for settlement.
+ *
+ * @param publicId - The reservation's public identifier
+ * @returns The parsed item snapshot and reservation status, or `null` if the reservation is unavailable, ineligible, or invalid
+ */
 export async function getSettlementReservation(
   db: D1Database,
   publicId: string,

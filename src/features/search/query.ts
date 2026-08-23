@@ -1,8 +1,10 @@
 export const MAX_SEARCH_QUERY_LENGTH = 200;
 
 /**
- * Keep public search work bounded and give equivalent whitespace variants one
- * cache key. Case is preserved for display; FTS normalizes it internally.
+ * Normalizes a search query for consistent processing.
+ *
+ * @param raw - The unnormalized search query
+ * @returns The trimmed query with consecutive whitespace collapsed and limited to 200 Unicode characters
  */
 export function normalizeSearchQuery(raw: string): string {
   const collapsed = raw.trim().replace(/\s+/g, " ");

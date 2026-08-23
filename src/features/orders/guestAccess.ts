@@ -24,10 +24,10 @@ export interface GuestAccess {
 }
 
 /**
- * Claim a checkout's whole identity at once: a fresh ord_ public ID plus its
- * guest access token, inserted as the registry row. BOTH values regenerate on
- * a unique conflict — the registry PK is the order public id, so retrying only
- * the token could never resolve an order-id collision.
+ * Creates and registers a public order ID with a guest access token.
+ *
+ * @returns The generated public ID and guest access token.
+ * @throws If registration fails for a reason other than a uniqueness conflict, or if uniqueness conflicts persist after three attempts.
  */
 export async function claimOrderIdentity(
   db: D1Database,
@@ -60,6 +60,12 @@ export async function resolveAccessToken(
     .first<GuestAccess>();
 }
 
+/**
+ * Retrieves guest access details for an order.
+ *
+ * @param orderPublicId - The order's public identifier
+ * @returns The guest access record, or `null` if none exists
+ */
 export async function getGuestAccess(
   db: D1Database,
   orderPublicId: string,
@@ -71,15 +77,11 @@ export async function getGuestAccess(
 }
 
 /**
- * Rotate the token for a SETTLED order (support remedy for a leaked link) AND
- * queue its guest-link-reissue:<generation> notification in the SAME D1 batch —
- * a crash between the two would otherwise kill every old link with no
- * replacement email ever queued. The settled guard is the orders join: a
- * pending checkout's hosted provider still holds the old token in its
- * success_url, so reissue there would strand a paying customer — those are
- * cancelled and recreated instead. Returns the new generation (never the
- * token — the queued email is the only delivery path), or null when the order
- * is unsettled or unknown.
+ * Reissues guest access for a known order and queues a notification for the new access generation.
+ *
+ * @param orderPublicId - The public identifier of the order whose guest access should be reissued
+ * @returns The new access generation, or `null` if the order is unknown or unsettled
+ * @throws Error if token-collision retries are exhausted
  */
 export async function reissueGuestAccess(
   db: D1Database,
@@ -128,11 +130,11 @@ export async function reissueGuestAccess(
 }
 
 /**
- * Tokenized guest order URL for CUSTOMER-facing emails and redirects — the only
- * code allowed to read the stored token. Legacy orders link by their preserved
- * public id; a new order with no registry row returns null (omit the link)
- * rather than ever emitting a bare ord_ URL. Owner/operator notifications must
- * use the authenticated /admin/orders/<public_id> route instead, never this.
+ * Builds a customer-facing guest order URL.
+ *
+ * @param orderPublicId - The order's public identifier, or `null` when no order exists.
+ * @param baseUrl - The base URL for the application.
+ * @returns A guest order URL, or `null` when the identifier is missing or has no guest access record.
  */
 export async function guestOrderUrl(
   db: D1Database,

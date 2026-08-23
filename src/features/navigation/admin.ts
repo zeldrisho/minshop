@@ -26,22 +26,11 @@ export interface TargetChoices {
 }
 
 /**
- * Options for the target picker.
+ * Finds available navigation targets matching a search query.
  *
- * Bounded, and searchable rather than merely truncated. A single unbounded
- * <select> would render every product into every admin page load; a bare cap —
- * the mistake the home-page selector made — bounds the payload but makes item
- * N+1 permanently unselectable, which removes capability rather than limiting it.
- *
- * Alphabetical, not most-recent: `pages` has updated_at but `products` and
- * `categories` only have created_at, so a recency order would silently mean three
- * different things. It is also the wrong affordance — a merchant building
- * navigation is hunting for one known item, not reviewing recent edits.
- *
- * Only AVAILABLE targets are offered. An item already pointing at a draft or
- * inactive target still appears in the menu list with its warning; the list and
- * the picker answer different questions ("what is in this menu" vs "what may I
- * add"), so they deliberately disagree.
+ * @param targetType - The type of target to search
+ * @param query - The search text used to match target names
+ * @returns The matching target options and the number of additional matches beyond the result limit
  */
 export async function targetChoices(
   db: D1Database,
@@ -80,11 +69,10 @@ export async function targetChoices(
 }
 
 /**
- * Why an item is hidden on the storefront, or null when it is fine.
+ * Explains why a menu item is unavailable on the storefront.
  *
- * Categories have no draft or inactive state — 0004_categories.sql defines only
- * id/name/slug/parent_id/created_at — so deletion is the only way one becomes
- * unavailable, which also makes it the easiest to miss.
+ * @param item - The menu item to evaluate
+ * @returns The unavailability reason, or `null` when the item is available
  */
 export function unavailableReason(item: MenuItem): string | null {
   if (item.available) return null;
@@ -105,16 +93,11 @@ export function unavailableReason(item: MenuItem): string | null {
 }
 
 /**
- * Which menus reference each of these targets, keyed by target id.
+ * Finds menu locations that reference each target ID.
  *
- * For the admin list pages, so deleting a page/product/category can say what it
- * will break BEFORE it happens. The storefront hides the resulting dead item
- * safely, but silently — without this the merchant only discovers the gap later,
- * in Navigation, with no idea why a menu shrank.
- *
- * One bounded query for the whole list rather than one per row. Ids come from a
- * page of admin rows, so the IN list is small, but chunk anyway: D1 allows 100
- * bound parameters per query.
+ * @param targetType - The type of targets to search for
+ * @param ids - The target IDs to look up
+ * @returns A map from each referenced target ID to its unique menu locations
  */
 export async function menuReferencesFor(
   db: D1Database,

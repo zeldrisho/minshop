@@ -11,7 +11,14 @@ const COLUMNS: Record<string, string> = {
   id: "id",
 };
 
-/** Build a safe `ORDER BY` clause from query params (whitelisted col + direction). */
+/**
+ * Builds a safe SQL `ORDER BY` clause from whitelisted sort parameters.
+ *
+ * @param sort - The requested sort field.
+ * @param dir - The requested sort direction.
+ * @param fallback - The field and direction used when the requested values are invalid or absent.
+ * @returns A SQL `ORDER BY` expression with deterministic ID tie-breaking.
+ */
 export function orderByClause(
   sort: string | null,
   dir: string | null,
@@ -47,9 +54,11 @@ export interface StoreSortQuery {
 }
 
 /**
- * Canonical storefront sorting. Admin-only columns such as stock/sold stay
- * unavailable on public pages, and equivalent invalid/default query strings
- * collapse to one edge-cache key.
+ * Normalizes storefront sorting parameters to a supported sort field and direction.
+ *
+ * @param sort - The requested sort field; unsupported values default to `newest`
+ * @param dir - The requested direction; only `asc` is preserved, and all other values become `desc`
+ * @returns The normalized storefront sort field and direction
  */
 export function parseStoreSortQuery(sort: string | null, dir: string | null): StoreSortQuery {
   const normalizedSort: StoreSort =

@@ -20,9 +20,12 @@ export function clearRateCache(): void {
 }
 
 /**
- * BTC spot price in `currency` (fiat units per 1 BTC). `rateUrl` is a template
- * with a `{currency}` placeholder. Expects a Coinbase-shaped `{ data: { amount } }`
- * response. Cached for 60s. Throws if the price can't be fetched/parsed.
+ * Retrieves the current fiat price of one Bitcoin for a currency.
+ *
+ * @param currency - The fiat currency code.
+ * @param rateUrl - URL template containing a `{currency}` placeholder.
+ * @returns The fiat price of one Bitcoin.
+ * @throws If the rate request fails or returns an invalid, nonpositive amount.
  */
 export async function getBtcRate(currency: string, rateUrl: string): Promise<number> {
   const cur = currency.toUpperCase();

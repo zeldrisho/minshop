@@ -3,17 +3,10 @@ import { getConfig } from "../../config";
 import { getSetting } from "../settings/db";
 
 /**
- * Optionally downscale + recompress an uploaded image to WebP before it's stored,
- * via the Cloudflare Images binding. Controlled by config.images.optimizeOnUpload:
+ * Optionally optimizes an uploaded image before storage.
  *
- *   - OFF (default): the original file is stored unchanged — $0, fully local.
- *   - ON: transforms via the Cloudflare Images binding — free up to 5,000/mo, then
- *     usage-billed (separate from the Workers plan; works on Workers Free). Runs in
- *     local dev too — miniflare's offline binding supports the width + format we use
- *     (verified); `wrangler dev --remote` uses the production transformer.
- *
- * The fallback (and the try/catch) mean enabling it can never break an upload —
- * if the binding is missing or errors, you just store the original.
+ * @param file - The uploaded image to optimize
+ * @returns The optimized WebP image, or the original file when optimization is disabled or unavailable
  */
 export async function optimizeUpload(file: File): Promise<File> {
   const cfg = getConfig().images;

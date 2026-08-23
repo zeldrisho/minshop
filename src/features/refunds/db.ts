@@ -22,10 +22,11 @@ import { generatePublicId, isPublicIdConflict } from "../ids/publicId.ts";
 /** Ledger kinds. See migration 0025 for what each one means. */
 
 /**
- * Run a refund write batch, regenerating the rfnd_ public id on a unique
- * conflict — the id binds inside the claim INSERT, so the whole statement set
- * is rebuilt per attempt. Idempotency-key conflicts are handled in SQL
- * (ON CONFLICT DO NOTHING) and never reach this retry.
+ * Executes a refund write batch with retry handling for public ID conflicts.
+ *
+ * @param build - Creates the statements for a generated refund public ID
+ * @returns The results of the executed batch
+ * @throws The final public ID conflict after three attempts, or any other database error
  */
 async function batchWithRefundId<T>(
   db: D1Database,
@@ -99,10 +100,22 @@ export function refundableCents(order: Order): number {
   return Math.max(0, order.amount_total_cents - order.refunded_cents);
 }
 
+/**
+ * Finds a refund by its idempotency key.
+ *
+ * @param key - The idempotency key associated with the refund
+ * @returns The matching refund, or `null` if no refund exists
+ */
 async function findByIdempotencyKey(db: D1Database, key: string): Promise<Refund | null> {
   return db.prepare("SELECT * FROM refunds WHERE idempotency_key = ?").bind(key).first<Refund>();
 }
 
+/**
+ * Retrieves the refund total and original amount for an order.
+ *
+ * @param orderId - The order identifier
+ * @returns The order's refunded and total amounts, or `null` if the order does not exist.
+ */
 async function orderTotals(
   db: D1Database,
   orderId: number,
@@ -126,20 +139,12 @@ export interface ExternalRefundInput {
 }
 
 /**
- * Record money already returned to the customer outside the provider —
- * a Lightning repayment, a bank transfer, or demo bookkeeping.
+ * Records a refund made outside the payment provider.
  *
- * Moves no money. Increments `external_refunded_cents` additively.
+ * The operation is idempotent and updates the order's external refunded total.
  *
- * The three statements run as one batch:
- *   1. Claim a `pending` ledger row, but only while the balance covers it.
- *      ON CONFLICT DO NOTHING makes a replayed key claim nothing.
- *   2. Apply the increment, but only while that claim is still pending — so a
- *      replay (whose claim is already `succeeded`) cannot increment again.
- *   3. Consume the claim.
- *
- * Statement 2 applies exactly when statement 1 inserted: the batch is
- * serialized, so no concurrent writer can move the balance between them.
+ * @param input - Refund details, including the order, positive amount, and idempotency key
+ * @returns The refund result, indicating whether the refund was recorded or why it was rejected
  */
 export async function recordExternalRefund(
   db: D1Database,
@@ -264,15 +269,14 @@ export type ProviderSyncResult =
   | { ok: false; reason: "not_found" | "no_change" };
 
 /**
- * Synchronise the provider's own cumulative refunded total onto the order.
+ * Synchronizes the provider's cumulative refunded total for an order.
  *
- * Absolute, not additive: `provider_refunded_cents` becomes
- * MAX(current, incoming). A duplicate webhook, an out-of-order webhook, or a
- * manual sync of a total we already hold is therefore a harmless no-op, and a
- * minshop-initiated refund followed by its own `charge.refunded` counts once.
+ * Duplicate, stale, and out-of-order totals are treated as no-ops. When the
+ * total advances, records only the increase as a provider refund.
  *
- * The ledger records only the DELTA the total advanced by, so refund history
- * sums to the provider component rather than double-counting it.
+ * @param input - The order, cumulative provider total, and provider event details.
+ * @returns The synchronization outcome, including whether the total advanced and
+ * the resulting refunded amount.
  */
 export async function syncProviderRefund(
   db: D1Database,
@@ -387,12 +391,11 @@ export async function syncProviderRefund(
 }
 
 /**
- * Correct a mistaken manual or demo entry. Moves no money — it only undoes
- * minshop bookkeeping, so it is refused for provider-authoritative rows whose
- * numbers belong to Stripe rather than to us.
+ * Reverses a succeeded manually recorded or demo refund without moving money.
  *
- * `reverses_refund_id` is UNIQUE, so the same entry can never be voided twice:
- * the second attempt loses the claim insert and the batch applies nothing.
+ * @param db - The database connection
+ * @param input - The refund to reverse and reversal metadata
+ * @returns The reversal result, including the updated refund totals when successful
  */
 export async function voidRecordedRefund(
   db: D1Database,
@@ -488,9 +491,10 @@ export async function voidRecordedRefund(
 }
 
 /**
- * Which refunds in a history have been voided. A reversed entry keeps its
- * 'succeeded' status so the ledger still sums correctly (see voidRecordedRefund),
- * so "was this undone?" is answered by the presence of a reversal pointing at it.
+ * Identifies refunds that have been reversed in a refund history.
+ *
+ * @param history - Refund records to inspect
+ * @returns The IDs of refunds referenced by reversal entries
  */
 export function reversedRefundIds(history: Refund[]): Set<number> {
   return new Set(
@@ -538,16 +542,10 @@ export async function openRefundReview(
 }
 
 /**
- * Open a reconciliation review when the two components together exceed the
- * order total — the provider's own number and a hand-recorded one are each
- * plausible, so neither is discarded and a human decides which is wrong.
+ * Opens a review when recorded provider and external refunds exceed the order total.
  *
- * Reads current state rather than taking a caller's snapshot, so every path
- * that can move a total (webhook, admin sync, manual record) gets the same
- * answer. The generated aggregate is already clamped; this is what makes the
- * conflict visible instead of silently absorbed.
- *
- * Returns the review reason when one was opened, otherwise null.
+ * @param orderId - The order to evaluate
+ * @returns The review reason if the order exceeds its total, or `null` otherwise
  */
 export async function openReviewIfOverRefunded(
   db: D1Database,
@@ -625,19 +623,11 @@ export async function listUnmatchedRefundEvents(
 }
 
 /**
- * Close out a CONFLICTING refund event a human has resolved out of band.
+ * Dismisses a failed provider refund event after it has been resolved.
  *
- * Restricted to `failed` on purpose. A `failed` event was matched to an order
- * and contradicts it (a currency mismatch, say): there is nothing left to
- * re-apply, so it needs a terminal state or the queue never empties and starts
- * being ignored. An `unmatched` event is the opposite — a refund that really
- * happened and has NO order yet — and dismissing one would permanently hide
- * real money from reconciliation. Those are only ever resolved by correlating
- * them, so the guard lives here rather than in the UI that happens to offer the
- * right button today.
- *
- * The original failure reason is kept and the dismissal appended, so the audit
- * record still says what the conflict actually was.
+ * @param eventId - The provider event identifier
+ * @param dismissedBy - The person who dismissed the event, or `null`
+ * @returns `true` if the failed event was dismissed, `false` if no matching failed event was found
  */
 export async function dismissRefundEvent(
   db: D1Database,

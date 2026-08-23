@@ -14,8 +14,9 @@ export interface PageFields {
 }
 
 /**
- * Parse and validate the page form. Returns either the fields or a single
- * user-facing message, matching parseProductForm's shape.
+ * Parses and validates submitted page fields.
+ *
+ * @returns The normalized page fields, or a user-facing validation error.
  */
 export function parsePageForm(form: FormData): { data: PageFields } | { error: string } {
   const title = String(form.get("title") ?? "").trim();

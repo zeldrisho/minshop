@@ -37,6 +37,12 @@ export function escapeLike(term: string): string {
   return term.replace(/[\\%_]/g, (c) => `\\${c}`);
 }
 
+/**
+ * Parses product filter values from URL parameters.
+ *
+ * @param params - The URL parameters containing product filter values
+ * @returns The validated product filters, with the search query trimmed and limited to 100 characters
+ */
 export function parseProductFilters(params: URLSearchParams): ProductFilters {
   const status = params.get("status");
   const stock = params.get("stock");
@@ -61,6 +67,12 @@ export function productFilterParams(f: ProductFilters): Record<string, string | 
   };
 }
 
+/**
+ * Builds a SQL filter clause and its bound parameters for product status, stock, and name search filters.
+ *
+ * @param f - The product filters to apply
+ * @returns The SQL `WHERE` clause and values for its parameters
+ */
 export function productFilterClause(f: ProductFilters): { where: string; params: string[] } {
   const parts: string[] = [];
   const params: string[] = [];

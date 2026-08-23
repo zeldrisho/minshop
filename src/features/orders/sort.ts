@@ -11,7 +11,13 @@ const COLUMNS: Record<string, string> = {
   created: "created_at",
 };
 
-/** Build a safe `ORDER BY` clause for orders from query params. */
+/**
+ * Builds a safe SQL `ORDER BY` clause for orders.
+ *
+ * @param sort - The user-facing sort key
+ * @param dir - The requested sort direction
+ * @returns An `ORDER BY` fragment with a deterministic `id` tiebreaker
+ */
 export function orderByClause(sort: string | null, dir: string | null): string {
   const col = (sort && COLUMNS[sort]) || "created_at";
   const d = dir?.toLowerCase() === "asc" ? "ASC" : dir?.toLowerCase() === "desc" ? "DESC" : "DESC";

@@ -2,7 +2,12 @@ import type { D1Database } from "@cloudflare/workers-types";
 
 const DIACRITICS = /[̀-ͯ]/g;
 
-/** Turn arbitrary text into a URL-safe slug. */
+/**
+ * Converts text into a URL-safe, lowercase slug.
+ *
+ * @param input - The text to convert.
+ * @returns A hyphen-separated slug limited to 80 characters, or `"product"` when no slug can be produced.
+ */
 export function slugify(input: string): string {
   const base = input
     .normalize("NFKD")
@@ -16,8 +21,11 @@ export function slugify(input: string): string {
 }
 
 /**
- * Return a slug unique across products, appending -2, -3, … on collision.
- * Pass excludeId when updating so a product doesn't collide with itself.
+ * Generates a product slug that is unique in the database.
+ *
+ * @param base - The text from which to generate the slug
+ * @param excludeId - The product ID to exclude when checking for collisions
+ * @returns A unique product slug
  */
 export async function uniqueSlug(
   db: D1Database,

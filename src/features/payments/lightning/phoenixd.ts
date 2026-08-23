@@ -22,6 +22,13 @@ function basicAuth(password: string): string {
   return `Basic ${btoa(`:${password}`)}`;
 }
 
+/**
+ * Computes an HMAC-SHA-256 digest for a message.
+ *
+ * @param key - The secret key used to authenticate the message
+ * @param message - The message to authenticate
+ * @returns The digest encoded as a lowercase hexadecimal string
+ */
 async function hmacSha256Hex(key: string, message: string): Promise<string> {
   const k = await crypto.subtle.importKey(
     "raw",
@@ -34,6 +41,13 @@ async function hmacSha256Hex(key: string, message: string): Promise<string> {
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/**
+ * Creates a Phoenixd-backed Lightning payment service.
+ *
+ * @param baseUrl - The Phoenixd server base URL
+ * @param password - The HTTP authentication password
+ * @returns A Lightning backend configured for Phoenixd
+ */
 export function createPhoenixdBackend(baseUrl: string, password: string): LightningBackend {
   const base = baseUrl.replace(/\/+$/, "");
   const auth = basicAuth(password);

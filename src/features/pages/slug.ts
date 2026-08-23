@@ -7,15 +7,22 @@ import { slugify } from "../products/slug";
  * there is no reserved-slug list to maintain here.
  */
 
-/** Slugify, but fall back to `page` rather than the product helper's `product`. */
+/**
+ * Generates a page slug from the provided input.
+ *
+ * @returns The generated slug, using `page` when the result would be `product` without the input containing "product".
+ */
 export function pageSlugify(input: string): string {
   const slug = slugify(input);
   return slug === "product" && !/product/i.test(input) ? "page" : slug;
 }
 
 /**
- * Return a slug unique across pages, appending -2, -3, … on collision.
- * Pass excludeId when updating so a page doesn't collide with itself.
+ * Generates a page slug that is unique in the `pages` table.
+ *
+ * @param base - The text from which to generate the initial slug
+ * @param excludeId - The page ID to exclude when checking for collisions
+ * @returns A unique page slug, appending `-2`, `-3`, and so on when needed
  */
 export async function uniquePageSlug(
   db: D1Database,

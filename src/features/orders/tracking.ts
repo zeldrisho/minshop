@@ -7,11 +7,23 @@ export const CARRIERS = [
   { code: "other", name: "Other" },
 ] as const;
 
+/**
+ * Resolves a carrier code to its display name.
+ *
+ * @param code - The carrier code to resolve
+ * @returns The carrier's display name, the original code when no carrier matches, or `"—"` when `code` is null
+ */
 export function carrierName(code: string | null): string {
   return CARRIERS.find((c) => c.code === code)?.name ?? code ?? "—";
 }
 
-/** Public tracking URL for a carrier + number, or null when not linkable. */
+/**
+ * Builds a public tracking URL for a supported carrier and tracking number.
+ *
+ * @param carrier - The carrier code.
+ * @param number - The tracking number.
+ * @returns The URL-encoded tracking URL, or `null` when the carrier or number is missing or the carrier is not linkable.
+ */
 export function trackingUrl(carrier: string | null, number: string | null): string | null {
   if (!carrier || !number) return null;
   const n = encodeURIComponent(number);
