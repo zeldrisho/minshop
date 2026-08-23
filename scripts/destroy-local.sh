@@ -37,4 +37,4 @@ fi
 pkill -f "wrangler dev" 2>/dev/null || true
 
 rm -rf "$D1" "$R2"
-echo "✓ Local store reset. Set it up again with:  npm run provision:local -- --seed"
+echo "✓ Local store reset. Set it up again with:  vp run provision:local -- --seed"

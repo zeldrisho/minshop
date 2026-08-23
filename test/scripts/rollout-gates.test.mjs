@@ -35,9 +35,11 @@ const source = (path) => readFileSync(new URL(`../../${path}`, import.meta.url),
 describe("digital-delivery rollout gates", () => {
   it("advances one release at a time, each threshold one above the last", () => {
     const ladder = source("src/features/digitalDelivery/rollout.ts");
-    expect(ladder).toMatch(/lifecycleActive = \(release:[^)]*\) =>\s*release >= 2/);
-    expect(ladder).toMatch(/entitlementWriterActive = \(release:[^)]*\) =>\s*release >= 3/);
-    expect(ladder).toMatch(/attachmentActive = \(release:[^)]*\) =>\s*release >= 4/);
+    expect(ladder).toMatch(/lifecycleActive\s*=\s*\(\s*release[^)]*\)\s*=>\s*release >= 2/);
+    expect(ladder).toMatch(
+      /entitlementWriterActive\s*=\s*\(\s*release[\s\S]*?\)\s*=>\s*release >= 3/,
+    );
+    expect(ladder).toMatch(/attachmentActive\s*=\s*\(\s*release[^)]*\)\s*=>\s*release >= 4/);
   });
 
   it("reports the release this build is pinned to", () => {
@@ -70,20 +72,25 @@ describe("digital-delivery rollout gates", () => {
   // the product route gates upload and removal — so a file-level "contains a
   // gate somewhere" check goes on passing after any single one is removed. That
   // is exactly the case where an earlier release silently stops being dormant.
-  const countOf = (haystack, needle) => haystack.split(needle).length - 1;
+  const countOf = (haystack, needle) => {
+    // oxfmt switched single→double quotes; count either form by normalizing quotes
+    const normalizedHaystack = haystack.replaceAll('"', "'");
+    const normalizedNeedle = needle.replaceAll('"', "'");
+    return normalizedHaystack.split(normalizedNeedle).length - 1;
+  };
 
   it.each([
     // Release 2 — terminal reservation states.
     [
       "src/features/orders/reservations.ts",
       "provider-confirmed terminal state",
-      /releaseReservation\(db, publicId, lifecycleActive\(\) \? status : 'released'\)/,
+      /releaseReservation\(db, publicId, lifecycleActive\(\) \? status : ["']released["']\)/,
     ],
     // Release 2 — itm_ identity, all three sites of one claim.
     [
       "src/features/orders/reservations.ts",
       "identity generation",
-      /publicId: item\.publicId \?\? \(lifecycleActive\(release\) \? generatePublicId\('orderItem'\) : undefined\)/,
+      /publicId:\s*item\.publicId\s*\?\?\s*\(lifecycleActive\(release\)\s*\?\s*generatePublicId\(["']orderItem["']\)\s*:\s*undefined\)/,
     ],
     [
       "src/features/orders/reservations.ts",
@@ -93,7 +100,7 @@ describe("digital-delivery rollout gates", () => {
     [
       "src/features/orders/reservations.ts",
       "registry claim statements",
-      /const claims = lifecycleActive\(release\) \?/,
+      /const claims = lifecycleActive\(release\)\s*\?/,
     ],
     // Release 2 — both JSON checkout responses.
     [
@@ -121,7 +128,7 @@ describe("digital-delivery rollout gates", () => {
     [
       "src/pages/api/admin/products/[id].ts",
       "deliverable removal",
-      /\} else if \(attachmentActive\(\) && form\.get\('remove_deliverable'\)/,
+      /\} else if \(attachmentActive\(\) && form\.get\(["']remove_deliverable["']\)/,
     ],
   ])("%s gates %s", (path, _site, pattern) => {
     expect(source(path)).toMatch(pattern);
@@ -159,9 +166,9 @@ describe("optional MCP advertisement", () => {
   const llms = source("src/pages/llms.txt.ts");
 
   it("renders the MCP line only from a configured MCP_URL", () => {
-    expect(llms).toMatch(/const mcpUrl = \(env\.MCP_URL \?\? ''\)\.trim\(\)/);
+    expect(llms).toMatch(/const mcpUrl = \(env\.MCP_URL \?\? (?:''|"")\)\.trim\(\)/);
     // Falsy MCP_URL must contribute the empty string, never a placeholder host.
-    expect(llms).toMatch(/: '';/);
+    expect(llms).toMatch(/: (?:''|"");/);
     expect(llms).not.toMatch(/mcp\.example\.com|your-mcp-host['"`]/);
   });
 

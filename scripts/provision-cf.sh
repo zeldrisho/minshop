@@ -9,12 +9,12 @@
 #   Usage:  scripts/provision-cf.sh <slug>
 #   <slug>: lowercase letters/digits/hyphens, e.g. "acme-store".
 #
-# Deploys via the SAME path as `npm run deploy` (the Astro adapter integrates with
+# Deploys via the SAME path as `vp run deploy` (the Astro adapter integrates with
 # ./wrangler.jsonc), so we temporarily swap in the instance config and restore the
 # original on exit — even if the script fails partway.
 #
 # ⚠  Creates REAL Cloudflare resources on your account and may incur usage. Review
-#    before running. Requires: wrangler (logged in: `npx wrangler login`), openssl.
+#    before running. Requires: wrangler (logged in: `vp exec wrangler login`), openssl.
 set -euo pipefail
 
 SLUG="${1:-}"
@@ -25,7 +25,7 @@ fi
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-W="npx --yes wrangler"
+W="vp exec wrangler"
 DB_NAME="${SLUG}-db"
 BUCKET="${SLUG}-images"
 FILES_BUCKET="${SLUG}-files"
@@ -75,7 +75,7 @@ sed -e "s/__NAME__/$SLUG/g" \
 
 echo "▸ [4/5] Applying migrations + building…"
 $W d1 migrations apply DB --remote
-npx --yes astro build
+vp exec astro build
 
 echo "▸ [5/5] Deploying + setting AUTH_SECRET + SECRETS_KEK…"
 $W deploy
@@ -95,8 +95,8 @@ cat <<EOF
   Payment keys: paste them in the dashboard (Settings → Payment keys) — they're
   stored encrypted in D1 under the SECRETS_KEK just set. Or set them as Worker
   secrets instead (they take a back seat to D1 values):
-    npx wrangler secret put STRIPE_SECRET_KEY      --name $SLUG
-    npx wrangler secret put STRIPE_WEBHOOK_SECRET  --name $SLUG
+    vp exec wrangler secret put STRIPE_SECRET_KEY      --name $SLUG
+    vp exec wrangler secret put STRIPE_WEBHOOK_SECRET  --name $SLUG
 
   Admin auth: open /admin/setup and set the admin password there (stored hashed in
   D1). The wizard is reachable until you do — so set it promptly, or front /admin

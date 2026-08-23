@@ -62,7 +62,7 @@ describe("formatWeight", () => {
 describe("unit round-trip idempotence", () => {
   // The display precision per unit is chosen so one displayed step is finer than a
   // gram. Sampled rather than exhaustive: 4M format+parse cycles would slow every
-  // `npm run verify` for a property the precision table already guarantees.
+  // `vp run verify` for a property the precision table already guarantees.
   const samples = new Set<number>([0, 1, 2, 7, 9, 453, 454, 999, 1000, MAX_WEIGHT_GRAMS]);
   for (let grams = 0; grams <= 2000; grams += 1) samples.add(grams);
   for (let grams = 2000; grams <= MAX_WEIGHT_GRAMS; grams += 997) samples.add(grams);

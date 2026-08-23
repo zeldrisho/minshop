@@ -4,10 +4,10 @@
 
 ## A product field
 
-1. New migration: `npx wrangler d1 migrations create minshop-db <name>` → `ALTER TABLE products ADD COLUMN …`
+1. New migration: `vp exec wrangler d1 migrations create minshop-db <name>` → `ALTER TABLE products ADD COLUMN …`
 2. Update `Product` / `AdminProduct` types + queries in `features/products/db.ts`
 3. Add field to `ProductForm.astro` + `parseProductForm` in `features/products/form.ts`
-4. `vp run db:migrate` (local) → `vp run db:migrate:remote` (prod, before deploy)
+4. `vp run db:migrate` (local) → `vp run db:migrate:remote` (prod, before deploy) — via `vp exec wrangler`
 
 ## A content page
 
@@ -40,10 +40,10 @@ Edit `shipping.zones` in `config.ts` default (or `store.config.ts` override). Pu
 ## A migration
 
 ```sh
-npx wrangler d1 migrations create minshop-db <name>
+vp exec wrangler d1 migrations create minshop-db <name>
 # edit migrations/<number>_<name>.sql  (CREATE TABLE IF NOT EXISTS / ALTER TABLE ADD COLUMN)
-npm run db:migrate          # local
-npm run db:migrate:remote   # prod, before deploy
+vp run db:migrate          # local
+vp run db:migrate:remote   # prod, before deploy
 ```
 
 Never edit an applied migration; never `DROP` destructively. Numbered files only.

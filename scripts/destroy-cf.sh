@@ -15,7 +15,7 @@ SLUG="${1:-}"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-W="npx --yes wrangler"
+W="vp exec wrangler"
 DB_NAME="${SLUG}-db"
 BUCKET="${SLUG}-images"
 FILES_BUCKET="${SLUG}-files"
@@ -76,7 +76,7 @@ if [[ "$files_bucket_deleted" == "1" ]]; then
 else
   {
     echo "RESIDUAL_RESOURCE=private-files"
-    echo "CLEANUP_COMMAND=npx wrangler r2 bucket delete $FILES_BUCKET"
+    echo "CLEANUP_COMMAND=vp exec wrangler r2 bucket delete $FILES_BUCKET"
   } >> "$META"
 fi
 echo "✓ Teardown of '$SLUG' issued. Check the Cloudflare dashboard to confirm."

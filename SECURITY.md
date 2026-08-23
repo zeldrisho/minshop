@@ -19,7 +19,7 @@ against a local or demo store are the fastest to act on.
 
 Please don't test against stores you don't own. The
 [live demo](https://demo.minshop.dev/) uses test payments only, but it's a
-shared instance; spin up your own with `npm create minshop@latest` instead.
+shared instance; spin up your own from a clone instead.
 
 ## Supported versions
 

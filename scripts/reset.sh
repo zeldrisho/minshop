@@ -31,7 +31,7 @@ done
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-W="npx --yes wrangler"
+W="vp exec wrangler"
 if [[ "$REMOTE" == "1" ]]; then TARGET="--remote"; WHERE="DEPLOYED"; else TARGET="--local"; WHERE="local"; fi
 
 if [[ "$YES" != "1" ]]; then

@@ -15,5 +15,5 @@ sed \
   -e 's/__DB_ID__/00000000-0000-0000-0000-000000000000/g' \
   "$root/mcp/wrangler.template.jsonc" > "$check_config"
 
-npx tsc -p "$root/mcp/tsconfig.json" --noEmit
-npx wrangler deploy --config "$check_config" --dry-run
+vp exec tsc -p "$root/mcp/tsconfig.json" --noEmit
+vp exec wrangler deploy --config "$check_config" --dry-run

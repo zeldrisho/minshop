@@ -114,7 +114,7 @@ function writeIfChanged(file, next) {
  * shared editor tsconfig from the config file. Artifacts for themes that no
  * longer exist are removed, so a deleted theme does not leave a pair pointing at
  * a missing directory. Called by astro.config.mjs (so a bare `astro dev` on a
- * fresh clone works) and by `npm run theme:sync`.
+ * fresh clone works) and by `vp run theme:sync`.
  */
 export function writeThemeArtifacts(root = process.cwd()) {
   const ids = discoverThemeIds(root);
