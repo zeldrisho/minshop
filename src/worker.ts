@@ -1,8 +1,8 @@
-import { handle } from '@astrojs/cloudflare/handler';
-import { env } from 'cloudflare:workers';
-import { sweepStaleNotifications } from './features/email/outbox';
-import { releaseExpiredReservations } from './features/orders/reservations';
-import { getSetting } from './features/settings/db';
+import { handle } from "@astrojs/cloudflare/handler";
+import { env } from "cloudflare:workers";
+import { sweepStaleNotifications } from "./features/email/outbox";
+import { releaseExpiredReservations } from "./features/orders/reservations";
+import { getSetting } from "./features/settings/db";
 
 /**
  * Worker entrypoint.
@@ -32,7 +32,7 @@ async function runScheduledSweeps(): Promise<void> {
   try {
     await releaseExpiredReservations(db, 50);
   } catch (err) {
-    console.error('Scheduled reservation sweep failed:', err);
+    console.error("Scheduled reservation sweep failed:", err);
   }
 
   // Notification retry needs an origin to build order links with, and a cron
@@ -41,12 +41,12 @@ async function runScheduledSweeps(): Promise<void> {
   // anyway, so skipping is correct rather than merely safe. Never guess here —
   // a wrong origin sends real customers dead links.
   try {
-    const origin = await getSetting(db, 'store_url');
+    const origin = await getSetting(db, "store_url");
     if (origin) {
       await sweepStaleNotifications(db, origin);
     }
   } catch (err) {
-    console.error('Scheduled notification sweep failed:', err);
+    console.error("Scheduled notification sweep failed:", err);
   }
 }
 

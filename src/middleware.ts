@@ -1,32 +1,22 @@
-import { defineMiddleware } from 'astro:middleware';
-import type { APIContext, MiddlewareNext } from 'astro';
-import { env } from 'cloudflare:workers';
-import { verifyAccessJwt } from './features/auth/access';
-import { accessGateDecision } from './features/auth/accessGate';
-import { verifySession } from './features/auth/session';
-import { adminCredential } from './features/auth/admin';
-import {
-  getStoreSettings,
-  parseStoreSettings,
-  STORE_SETTINGS_SQL,
-} from './features/settings/db';
+import { defineMiddleware } from "astro:middleware";
+import type { APIContext, MiddlewareNext } from "astro";
+import { env } from "cloudflare:workers";
+import { verifyAccessJwt } from "./features/auth/access";
+import { accessGateDecision } from "./features/auth/accessGate";
+import { verifySession } from "./features/auth/session";
+import { adminCredential } from "./features/auth/admin";
+import { getStoreSettings, parseStoreSettings, STORE_SETTINGS_SQL } from "./features/settings/db";
 import {
   MENU_ITEMS_SQL,
   EMPTY_MENUS,
   groupMenus,
   type MenuItemRow,
-} from './features/navigation/db';
-import {
-  checkRateLimit,
-  rateLimitBucket,
-  rateLimitedResponse,
-} from './features/auth/rateLimit';
-import {
-  responseCacheControl,
-} from './features/cache/public';
-import { addCacheTags, responseCacheTags } from './features/cache/tags';
-import { normalizeSearchQuery } from './features/search/query';
-import { isForbiddenFormOrigin } from './features/auth/formOrigin';
+} from "./features/navigation/db";
+import { checkRateLimit, rateLimitBucket, rateLimitedResponse } from "./features/auth/rateLimit";
+import { responseCacheControl } from "./features/cache/public";
+import { addCacheTags, responseCacheTags } from "./features/cache/tags";
+import { normalizeSearchQuery } from "./features/search/query";
+import { isForbiddenFormOrigin } from "./features/auth/formOrigin";
 
 /**
  * Admin auth gate. Protects BOTH the admin UI (`/admin/*`) and the admin API
@@ -57,10 +47,10 @@ import { isForbiddenFormOrigin } from './features/auth/formOrigin';
  */
 function isProtected(pathname: string): boolean {
   return (
-    pathname === '/admin' ||
-    pathname.startsWith('/admin/') ||
-    pathname === '/api/admin' ||
-    pathname.startsWith('/api/admin/')
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/") ||
+    pathname === "/api/admin" ||
+    pathname.startsWith("/api/admin/")
   );
 }
 
@@ -70,14 +60,12 @@ async function gate(context: APIContext, next: MiddlewareNext): Promise<Response
   // static assets skip it (one indexed D1 read per page, not per asset/API call).
   const path = context.url.pathname;
   const isDocument =
-    !path.startsWith('/api/') &&
-    !path.startsWith('/_') &&
-    !path.startsWith('/partials/');
+    !path.startsWith("/api/") && !path.startsWith("/_") && !path.startsWith("/partials/");
   if (isDocument) {
     // Storefront documents also need the header/footer menus. Both reads go in
     // ONE batch so /cart, /checkout, /account, /order, and /pay — which are never
     // edge-cached — don't pay a second D1 round trip.
-    const wantsMenus = !path.startsWith('/admin');
+    const wantsMenus = !path.startsWith("/admin");
     try {
       if (wantsMenus) {
         const [settings, menus] = await env.DB.batch<Record<string, string>>([
@@ -115,11 +103,11 @@ async function gate(context: APIContext, next: MiddlewareNext): Promise<Response
   // loaded and setup_complete isn't set.
   if (
     isDocument &&
-    !path.startsWith('/admin') &&
+    !path.startsWith("/admin") &&
     context.locals.settings &&
     !context.locals.settings.setupComplete
   ) {
-    return context.redirect('/admin/setup', 302);
+    return context.redirect("/admin/setup", 302);
   }
 
   // Throttle anonymous, resource-spending mutations and cache-missing searches.
@@ -127,18 +115,18 @@ async function gate(context: APIContext, next: MiddlewareNext): Promise<Response
   const bucket = rateLimitBucket(
     context.request.method,
     path,
-    normalizeSearchQuery(context.url.searchParams.get('q') ?? '') !== '',
+    normalizeSearchQuery(context.url.searchParams.get("q") ?? "") !== "",
   );
   if (bucket) {
     const limiter =
-      bucket === 'auth'
+      bucket === "auth"
         ? env.AUTH_RATE_LIMITER
-        : bucket === 'checkout'
+        : bucket === "checkout"
           ? env.CHECKOUT_RATE_LIMITER
           : env.SEARCH_RATE_LIMITER;
     try {
       if (!(await checkRateLimit(limiter, context.request, path))) {
-        console.warn(JSON.stringify({ event: 'rate_limited', bucket, path }));
+        console.warn(JSON.stringify({ event: "rate_limited", bucket, path }));
         return rateLimitedResponse(path);
       }
     } catch (error) {
@@ -146,7 +134,7 @@ async function gate(context: APIContext, next: MiddlewareNext): Promise<Response
       // failures remain visible in Workers Logs for operational follow-up.
       console.error(
         JSON.stringify({
-          event: 'rate_limit_error',
+          event: "rate_limit_error",
           bucket,
           path,
           message: error instanceof Error ? error.message : String(error),
@@ -166,16 +154,16 @@ async function gate(context: APIContext, next: MiddlewareNext): Promise<Response
   const cred = await adminCredential(env.DB);
   if (cred.enabled) {
     // The login page itself must be reachable unauthenticated (to log in).
-    if (path === '/admin/login') return next();
-    const session = context.cookies.get('admin_session')?.value ?? null;
+    if (path === "/admin/login") return next();
+    const session = context.cookies.get("admin_session")?.value ?? null;
     // Sign/verify with AUTH_SECRET (high-entropy key); the credential is the bound tag.
     const signingKey = env.AUTH_SECRET || cred.tagSource;
     if (await verifySession(session, signingKey, cred.tagSource, Date.now() / 1000)) return next();
     // Not authenticated: humans go to the login form, API callers get 401.
-    if (path.startsWith('/api/')) {
-      return new Response('Authentication required.', { status: 401 });
+    if (path.startsWith("/api/")) {
+      return new Response("Authentication required.", { status: 401 });
     }
-    return context.redirect('/admin/login', 303);
+    return context.redirect("/admin/login", 303);
   }
 
   // 3. Cloudflare Access. The edge injects a signed JWT into the origin request.
@@ -185,14 +173,14 @@ async function gate(context: APIContext, next: MiddlewareNext): Promise<Response
   //    Access mode REQUIRES CF_ACCESS_TEAM_DOMAIN + CF_ACCESS_AUD; without both we
   //    fail closed rather than trust an unverifiable header.
   const access = accessGateDecision(
-    context.request.headers.get('Cf-Access-Jwt-Assertion'),
+    context.request.headers.get("Cf-Access-Jwt-Assertion"),
     env.CF_ACCESS_TEAM_DOMAIN,
     env.CF_ACCESS_AUD,
   );
-  if (access.action === 'deny') {
+  if (access.action === "deny") {
     return new Response(access.message, { status: 403 });
   }
-  if (access.action === 'verify') {
+  if (access.action === "verify") {
     let identity = null;
     try {
       identity = await verifyAccessJwt(access.token, {
@@ -206,7 +194,7 @@ async function gate(context: APIContext, next: MiddlewareNext): Promise<Response
       context.locals.adminEmail = identity.email;
       return next();
     }
-    return new Response('Invalid Access token.', { status: 403 });
+    return new Response("Invalid Access token.", { status: 403 });
   }
 
   // 4. Bootstrap (first run): no admin password and no Access configuration. The
@@ -214,16 +202,16 @@ async function gate(context: APIContext, next: MiddlewareNext): Promise<Response
   //    step 2 and locks the door. Everything else under /admin bounces to setup;
   //    admin APIs get 401. (Set the password promptly, or front /admin with
   //    Cloudflare Access, to close this window. See README → Admin auth.)
-  if (path === '/admin/setup') return next();
-  if (path.startsWith('/api/')) {
-    return new Response('Admin not set up yet — complete /admin/setup first.', { status: 401 });
+  if (path === "/admin/setup") return next();
+  if (path.startsWith("/api/")) {
+    return new Response("Admin not set up yet — complete /admin/setup first.", { status: 401 });
   }
-  return context.redirect('/admin/setup', 303);
+  return context.redirect("/admin/setup", 303);
 }
 
 async function route(context: APIContext, next: MiddlewareNext): Promise<Response> {
   const path = context.url.pathname;
-  const productError = path.startsWith('/products/') && context.url.searchParams.has('error');
+  const productError = path.startsWith("/products/") && context.url.searchParams.has("error");
 
   let response = isForbiddenFormOrigin(context.request, context.url)
     ? new Response(`Cross-site ${context.request.method} form submissions are forbidden`, {
@@ -236,12 +224,12 @@ async function route(context: APIContext, next: MiddlewareNext): Promise<Respons
   const cacheControl = responseCacheControl(
     path,
     response.status,
-    response.headers.get('cache-control'),
+    response.headers.get("cache-control"),
     productError,
   );
-  if (response.headers.get('cache-control') !== cacheControl) {
+  if (response.headers.get("cache-control") !== cacheControl) {
     try {
-      response.headers.set('cache-control', cacheControl);
+      response.headers.set("cache-control", cacheControl);
     } catch {
       // Redirect responses can have immutable headers.
       response = new Response(response.body, {
@@ -249,7 +237,7 @@ async function route(context: APIContext, next: MiddlewareNext): Promise<Respons
         statusText: response.statusText,
         headers: new Headers(response.headers),
       });
-      response.headers.set('cache-control', cacheControl);
+      response.headers.set("cache-control", cacheControl);
     }
   }
 
@@ -274,9 +262,9 @@ async function route(context: APIContext, next: MiddlewareNext): Promise<Respons
 
 // Response hardening for a store on a real domain. Applied to EVERY response.
 const SECURITY_HEADERS: Record<string, string> = {
-  'x-content-type-options': 'nosniff', // don't MIME-sniff responses
-  'x-frame-options': 'DENY', // block framing (clickjacking) — nothing here is meant to be embedded
-  'strict-transport-security': 'max-age=31536000; includeSubDomains', // force HTTPS for a year
+  "x-content-type-options": "nosniff", // don't MIME-sniff responses
+  "x-frame-options": "DENY", // block framing (clickjacking) — nothing here is meant to be embedded
+  "strict-transport-security": "max-age=31536000; includeSubDomains", // force HTTPS for a year
 };
 
 /** Add the security headers, rebuilding when the response's headers are immutable
