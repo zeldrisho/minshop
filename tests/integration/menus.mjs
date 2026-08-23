@@ -27,7 +27,7 @@ import {
 // that the migration's seed reproduces what a store already renders.
 //
 // Schema is hand-rolled to the production shape, matching test-media.mjs.
-// test/integration/d1-integration.sh remains the sole full-migration gate.
+// tests/integration/d1-integration.sh remains the sole full-migration gate.
 
 const mf = new Miniflare({
   modules: true,

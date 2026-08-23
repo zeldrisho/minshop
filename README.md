@@ -11,7 +11,7 @@ Small, server-rendered store for Cloudflare Workers (D1 + R2) with a full admin,
 
 **[Live demo](https://demo.minshop.dev/)** (agent API at `/api/products`, `/api/checkout`) — test payments only.
 
-![minshop storefront and checkout](docs/media/minshop.gif)
+![minshop storefront and checkout](docs/assets/minshop.gif)
 
 ## Scaffold a store
 

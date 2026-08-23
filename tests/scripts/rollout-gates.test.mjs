@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-// Deliberately .mjs, not .ts, for the same reason as test/storefront/boundary.test.mjs:
+// Deliberately .mjs, not .ts, for the same reason as tests/storefront/boundary.test.mjs:
 // tsconfig's `types` is pinned to the Cloudflare types, so node builtins have no
 // declarations and a .ts file here fails `astro check`.
 import { readFileSync } from "node:fs";
@@ -24,7 +24,7 @@ import {
  * as "unknown or revoked", i.e. permanent loss), or a paid order records no
  * entitlement at all. Both fail silently, in production only.
  *
- * Cross-release BEHAVIOUR is covered in test/integration/reservations.mjs, which
+ * Cross-release BEHAVIOUR is covered in tests/integration/reservations.mjs, which
  * settles snapshots written in a higher release's shape.
  */
 

@@ -33,7 +33,7 @@ Clean-room gates: reservation concurrency/release/settlement/legacy compatibilit
 
 ```sh
 vp run test:storefront-equivalence   # astro build + storefront-baselines.sh
-vp test run test/storefront          # vitest run test/storefront
+vp test run tests/storefront          # vitest run tests/storefront
 ```
 
 Proves template refactors didn't change rendered output a customer sees. Run after non-trivial UI changes; screenshot to `/tmp` if needed (deleted after).

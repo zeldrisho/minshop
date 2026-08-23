@@ -29,7 +29,7 @@ describe("storefront boundary check", () => {
   });
 
   it("rejects a template that imports outside the allowlist", async () => {
-    const result = await check("test/storefront/violations/template");
+    const result = await check("tests/storefront/violations/template");
 
     expect(result.ok).toBe(false);
     expect(result.output).toContain("BadImport.astro");
@@ -37,7 +37,7 @@ describe("storefront boundary check", () => {
   });
 
   it("rejects a template that reads request context", async () => {
-    const result = await check("test/storefront/violations/template");
+    const result = await check("tests/storefront/violations/template");
 
     expect(result.ok).toBe(false);
     expect(result.output).toContain("BadContext.astro");
@@ -45,7 +45,7 @@ describe("storefront boundary check", () => {
   });
 
   it("rejects a control that reaches bindings or D1", async () => {
-    const result = await check("test/storefront/violations/controls");
+    const result = await check("tests/storefront/violations/controls");
 
     expect(result.ok).toBe(false);
     expect(result.output).toContain("cloudflare:workers");
@@ -55,7 +55,7 @@ describe("storefront boundary check", () => {
   it("follows a control through a local helper to a binding", async () => {
     // The control's own import list is clean. Checking only the first hop would
     // pass it, which is the whole reason the walk is transitive.
-    const result = await check("test/storefront/violations/controls");
+    const result = await check("tests/storefront/violations/controls");
 
     expect(result.ok).toBe(false);
     expect(result.output).toContain("IndirectControl.astro");
@@ -64,7 +64,7 @@ describe("storefront boundary check", () => {
   });
 
   it("sees dependencies introduced by a re-export", async () => {
-    const result = await check("test/storefront/violations/controls");
+    const result = await check("tests/storefront/violations/controls");
 
     expect(result.ok).toBe(false);
     expect(result.output).toContain("ReexportControl.astro");
@@ -72,7 +72,7 @@ describe("storefront boundary check", () => {
   });
 
   it("sees a dependency deferred to a dynamic import", async () => {
-    const result = await check("test/storefront/violations/template");
+    const result = await check("tests/storefront/violations/template");
 
     expect(result.ok).toBe(false);
     expect(result.output).toContain("DynamicImport.astro");
@@ -80,7 +80,7 @@ describe("storefront boundary check", () => {
 
   it("requires storefront models to be imported as types", async () => {
     // A value import of a shape puts runtime code in a presentation file.
-    const result = await check("test/storefront/violations/template");
+    const result = await check("tests/storefront/violations/template");
 
     expect(result.ok).toBe(false);
     expect(result.output).toContain("ValueModelImport.astro");
@@ -90,7 +90,7 @@ describe("storefront boundary check", () => {
   it("names the chain, not just the offending file", async () => {
     // "This control is binding-aware" is not actionable without knowing which
     // hop introduced it.
-    const result = await check("test/storefront/violations/controls");
+    const result = await check("tests/storefront/violations/controls");
 
     expect(result.output).toContain("→");
   });
@@ -100,7 +100,7 @@ describe("storefront boundary check", () => {
     // through. Asserted on its own file and specifier: the other fixtures in
     // this directory fail for unrelated reasons, so a shared "this directory
     // fails" assertion would stay green if subpath matching regressed.
-    const result = await check("test/storefront/violations/controls");
+    const result = await check("tests/storefront/violations/controls");
 
     expect(result.ok).toBe(false);
     expect(result.output).toContain("subpathHelper.mjs");
@@ -124,7 +124,7 @@ describe("storefront boundary check", () => {
     // The whole point of the second policy: controls encapsulate core behavior,
     // so queryHref is fine where a binding is not. If this ever starts failing,
     // the two policies have been collapsed into one.
-    const result = await check("test/storefront/violations/controls");
+    const result = await check("tests/storefront/violations/controls");
 
     expect(result.output).not.toContain("OkControl.astro");
   });
