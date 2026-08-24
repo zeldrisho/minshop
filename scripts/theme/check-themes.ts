@@ -25,11 +25,11 @@
  * reported error names the whole chain, because "this control is binding-aware"
  * is not actionable without knowing which hop introduced it.
  *
- * Usage: node scripts/theme/check-themes.mjs [dir...]
+ * Usage: node scripts/theme/check-themes.ts [dir...]
  */
 import { readdir, readFile, stat } from "node:fs/promises";
 import { dirname, join, normalize, relative } from "node:path";
-import { THEMES_DIR, discoverThemeIds } from "./themes.mjs";
+import { THEMES_DIR, discoverThemeIds } from "./themes.ts";
 
 const CONTROLS_DIR = "src/features/storefront/controls";
 const MODELS_MODULE = "src/features/storefront/models.ts";
@@ -90,14 +90,14 @@ const DENIED_MODULES = [
   { name: "node:fs", why: "filesystem access" },
 ];
 
-const SOURCE_EXTENSIONS = [".astro", ".ts", ".tsx", ".mjs", ".js"];
+const SOURCE_EXTENSIONS = [".astro", ".ts", ".tsx", ".js"];
 
 /**
  * Comments are stripped before scanning. Storefront files are expected to
  * DOCUMENT their boundary ("never reads Astro.locals"), and matching that prose
  * would fail exactly the components that explain themselves best.
  */
-function stripComments(source) {
+function stripComments(source: string): string {
   return (
     source
       .replace(/\/\*[\s\S]*?\*\//g, " ")
@@ -112,9 +112,14 @@ function stripComments(source) {
  * `import type` is materially weaker than a value import (it disappears at
  * build time), and the template allowlist depends on that distinction.
  */
-function importsOf(source) {
-  const found = [];
-  const add = (specifier, typeOnly) => found.push({ specifier, typeOnly });
+interface ImportRef {
+  specifier: string;
+  typeOnly: boolean;
+}
+
+function importsOf(source: string): ImportRef[] {
+  const found: ImportRef[] = [];
+  const add = (specifier: string, typeOnly: boolean) => found.push({ specifier, typeOnly });
 
   const patterns = [
     // import x from 'y' / import type { X } from 'y'
@@ -142,10 +147,10 @@ function importsOf(source) {
 }
 
 /** Resolve a relative specifier to an actual file, repo-relative. */
-async function resolveLocal(specifier, fromFile) {
+async function resolveLocal(specifier: string, fromFile: string): Promise<string | null> {
   if (!specifier.startsWith(".")) return null;
   const base = normalize(join(dirname(fromFile), specifier));
-  const candidates = [
+  const candidates: string[] = [
     base,
     ...SOURCE_EXTENSIONS.map((extension) => `${base}${extension}`),
     ...SOURCE_EXTENSIONS.map((extension) => join(base, `index${extension}`)),
@@ -160,7 +165,7 @@ async function resolveLocal(specifier, fromFile) {
   return null;
 }
 
-async function* walk(dir) {
+async function* walk(dir: string): AsyncGenerator<string> {
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true });
@@ -176,10 +181,10 @@ async function* walk(dir) {
   }
 }
 
-const problems = [];
-const describeChain = (chain) => chain.join("\n      → ");
+const problems: string[] = [];
+const describeChain = (chain: string[]) => chain.join("\n      → ");
 
-function checkDeniedDependency(specifier, resolved, chain) {
+function checkDeniedDependency(specifier: string, resolved: string | null, chain: string[]) {
   // Subpath-aware: an exact match would let `node:fs/promises` or
   // `cloudflare:workers/foo` through while banning the bare module.
   const module = DENIED_MODULES.find(
@@ -207,7 +212,7 @@ function checkDeniedDependency(specifier, resolved, chain) {
   }
 }
 
-function checkRequestContext(file, source) {
+function checkRequestContext(file: string, source: string) {
   for (const member of FORBIDDEN_CONTEXT) {
     if (new RegExp(`\\bAstro\\.${member}\\b`).test(source)) {
       problems.push(
@@ -223,7 +228,12 @@ function checkRequestContext(file, source) {
  * value import would pull runtime code into a presentation file), documented
  * controls, and files inside their own candidate root.
  */
-function checkTemplateImport({ specifier, typeOnly }, resolved, file, rootDir) {
+function checkTemplateImport(
+  { specifier, typeOnly }: ImportRef,
+  resolved: string | null,
+  file: string,
+  rootDir: string,
+) {
   if (resolved && !relative(rootDir, resolved).startsWith("..")) return;
   if (resolved === MODELS_MODULE) {
     if (!typeOnly) {
@@ -248,16 +258,18 @@ function checkTemplateImport({ specifier, typeOnly }, resolved, file, rootDir) {
  * to the root's policy; every file reached, at any depth, is held to the denied
  * dependency and request-context rules.
  */
-async function checkEntry(entry, rootDir, policy) {
-  const seen = new Set();
-  const queue = [{ file: entry, chain: [entry] }];
+type Policy = "template" | "control";
+
+async function checkEntry(entry: string, rootDir: string, policy: Policy) {
+  const seen = new Set<string>();
+  const queue: { file: string; chain: string[] }[] = [{ file: entry, chain: [entry] }];
 
   while (queue.length > 0) {
-    const { file, chain } = queue.shift();
+    const { file, chain } = queue.shift()!;
     if (seen.has(file)) continue;
     seen.add(file);
 
-    let source;
+    let source: string;
     try {
       source = stripComments(await readFile(file, "utf8"));
     } catch {
