@@ -6,7 +6,7 @@ security reports get priority over everything else.
 ## Reporting a vulnerability
 
 Use GitHub's private reporting:
-[Report a vulnerability](https://github.com/ddyy/minshop/security/advisories/new).
+[Report a vulnerability](https://github.com/zeldrisho/minshop/security/advisories/new).
 That opens a private advisory only the maintainer can see, keeps the whole
 thread in one place, and credits you if the report leads to a fix. If you'd
 rather not use GitHub, email **dev@daniel-yang.com**.
