@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
+import { afterEach, describe, expect, it } from "vite-plus/test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -9,13 +9,12 @@ import {
   normalizeThemeId,
   resolveTheme,
   themePath,
-} from "../../scripts/theme/themes.mjs";
+} from "../../scripts/theme/themes.ts";
 
-// .mjs: reads the filesystem, and tsconfig.compilerOptions.types is pinned to
-// the Cloudflare types. Same reason as boundary.test.mjs.
+// Reads the filesystem to exercise theme resolution against real directories.
 
-const roots = [];
-function fixture(ids, config) {
+const roots: string[] = [];
+function fixture(ids: string[], config?: string) {
   const root = mkdtempSync(join(tmpdir(), "theme-resolver-"));
   roots.push(root);
   for (const id of ids) mkdirSync(join(root, "src/themes", id), { recursive: true });
@@ -26,21 +25,9 @@ function fixture(ids, config) {
   return root;
 }
 
-// resolveTheme() gives process.env.THEME precedence over fixture configuration,
-// so an inherited THEME would steer these tests. Park the caller's value and
-// restore it afterwards instead of deleting it for good.
-const originalTheme = process.env.THEME;
-
-beforeEach(() => {
-  delete process.env.THEME;
-});
-
-afterAll(() => {
-  if (originalTheme !== undefined) process.env.THEME = originalTheme;
-});
-
 afterEach(() => {
-  while (roots.length) rmSync(roots.pop(), { recursive: true, force: true });
+  delete process.env.THEME;
+  while (roots.length) rmSync(roots.pop()!, { recursive: true, force: true });
 });
 
 describe("theme ids", () => {

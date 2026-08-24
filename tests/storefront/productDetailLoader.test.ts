@@ -149,6 +149,13 @@ describe("loadProductDetail public-ID policy", () => {
     await expect(load()).rejects.toThrow(/product image row 11 has no public_id/);
   });
 
+  it("refuses the image a variant points at when that image has no public ID", async () => {
+    rows.images = [galleryRow({ public_id: null })];
+    rows.variants = [variant({ image_id: 11 })];
+
+    await expect(load()).rejects.toThrow(/product image row 11 has no public_id/);
+  });
+
   it("reports not_found rather than throwing for a missing slug", async () => {
     const db = await import("../../src/features/products/db");
     vi.mocked(db.getProductBySlug).mockResolvedValueOnce(null);

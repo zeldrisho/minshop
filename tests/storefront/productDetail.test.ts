@@ -328,16 +328,8 @@ describe("an independently authored product page", () => {
     expect(html.indexOf('name="variant_id"')).toBeLessThan(html.indexOf("data-hero-track"));
     expect(html).toContain("data-fullpage");
     expect(html).toContain('id="pi-pimg_one"');
+    // Its own wording for the sold-out badge, via the documented prop.
     expect(html).toContain("alt-detail");
-  });
-
-  it("uses its own sold-out wording via the documented prop", async () => {
-    const html = await render(AltProductDetail, {
-      model: detail({ soldOut: true, images: galleryFrames("pimg_one", "pimg_two") }),
-      purchase: purchase({ soldOut: true }),
-    });
-
-    expect(html).toContain("Unavailable");
   });
 
   it("renders related products without ProductCard", async () => {

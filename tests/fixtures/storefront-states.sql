@@ -3,8 +3,8 @@
 -- One source for every product and page shape the storefront renders
 -- differently. Both consumers apply this file after ./seed.sql:
 --
---   tests/integration/storefront-baselines.sh  the equivalence gate
---   vp run db:seed:storefront-states           a browsable local instance
+--   test/integration/storefront-baselines.sh   the equivalence gate
+--   npm run db:seed:storefront-states          a browsable local instance
 --
 -- Keeping them on one fixture is the point. A shape that exists only in the
 -- gate cannot be looked at, and a shape that exists only locally is not
@@ -95,7 +95,7 @@ WHERE NOT EXISTS (SELECT 1 FROM pages WHERE slug = 'about');
 -- Four items is enough to show truncation pressure beside search and the cart.
 INSERT INTO menu_items (location, target_type, target_id, label, position)
 SELECT 'header', 'catalog', NULL, 'Shop', 0
-WHERE NOT EXISTS (SELECT 1 FROM menu_items WHERE location = 'header' AND position = 0);
+WHERE NOT EXISTS (SELECT 1 FROM menu_items WHERE location = 'header');
 
 INSERT INTO menu_items (location, target_type, target_id, label, position)
 SELECT 'header', 'category', c.id, 'Apparel', 1 FROM categories c

@@ -1,20 +1,22 @@
 import { describe, expect, it } from "vite-plus/test";
 
-// Deliberately .mjs, not .ts: this is the one storefront test that spawns a
-// process, and `tsconfig.compilerOptions.types` is pinned to the Cloudflare
-// types so node builtins have no declarations. A .mjs test keeps the check
-// without adding @types/node purely to describe `execFile`.
+// Spawns the boundary checker as a child process so the guardrail is tested
+// through its real CLI surface.
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
 const run = promisify(execFile);
 
-async function check(...paths) {
+async function check(...paths: string[]) {
   try {
-    const { stdout } = await run("node", ["scripts/theme/check-themes.mjs", ...paths]);
+    const { stdout } = await run("node", [
+      "--experimental-strip-types",
+      "scripts/theme/check-themes.ts",
+      ...paths,
+    ]);
     return { ok: true, output: stdout };
   } catch (error) {
-    const failure = error;
+    const failure = error as { stdout?: string; stderr?: string };
     return { ok: false, output: `${failure.stdout ?? ""}${failure.stderr ?? ""}` };
   }
 }
@@ -103,7 +105,7 @@ describe("storefront boundary check", () => {
     const result = await check("tests/storefront/violations/controls");
 
     expect(result.ok).toBe(false);
-    expect(result.output).toContain("subpathHelper.mjs");
+    expect(result.output).toContain("subpathHelper.ts");
     expect(result.output).toContain("node:fs/promises");
     expect(result.output).toContain("filesystem access");
   });

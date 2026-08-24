@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import { readFileSync } from "node:fs";
-import { deployPlan, executeDeployPlan, validateStamp } from "../../scripts/deploy/deploy-plan.mjs";
+import { deployPlan, executeDeployPlan, validateStamp } from "../../scripts/deploy/deploy-plan.ts";
 
 // The deploy ordering is a safety property: a failed or mis-selected build
-// must leave remote state untouched. deploy.mjs executes exactly what
+// must leave remote state untouched. deploy.ts executes exactly what
 // deployPlan returns, so pinning the plan here pins the ordering — moving
 // migrations above validation fails this suite, not a production database.
 
@@ -83,7 +83,7 @@ describe("validateStamp", () => {
 // Ordering strings alone cannot prove safety: a refactor could run the
 // migration inside the validate handler and every string would still be in
 // order. These tests execute the REAL step→operation mapping
-// (executeDeployPlan — the same function deploy.mjs runs) with spies, and
+// (executeDeployPlan — the same function deploy.ts runs) with spies, and
 // assert on what was actually invoked.
 describe("executeDeployPlan side effects", () => {
   const spies = (overrides = {}) => ({
@@ -123,11 +123,11 @@ describe("executeDeployPlan side effects", () => {
   });
 
   it("a successful deploy runs the operations in the safe order", async () => {
-    const order = [];
-    const named = (name, fn = () => {}) =>
-      vi.fn((...a) => {
+    const order: string[] = [];
+    const named = (name: string, fn: (...args: unknown[]) => unknown = () => {}) =>
+      vi.fn((...args: unknown[]) => {
         order.push(name);
-        return fn(...a);
+        return fn(...args);
       });
     const ops = spies({
       readStamp: named("validate", () => '{"theme":"acme"}'),
@@ -152,11 +152,11 @@ describe("executeDeployPlan side effects", () => {
   });
 
   it("purges only under cross-version caching, and after deploy", async () => {
-    const order = [];
-    const named = (name, fn = () => {}) =>
-      vi.fn((...a) => {
+    const order: string[] = [];
+    const named = (name: string, fn: (...args: unknown[]) => unknown = () => {}) =>
+      vi.fn((...args: unknown[]) => {
         order.push(name);
-        return fn(...a);
+        return fn(...args);
       });
     const crossVersion = spies({
       loadCacheConfig: () => ({ crossVersion: true, origin: "https://x", secret: "s" }),
@@ -172,13 +172,13 @@ describe("executeDeployPlan side effects", () => {
   });
 });
 
-describe("deploy.mjs stays on the executor", () => {
+describe("deploy.ts stays on the executor", () => {
   it("supplies operations to executeDeployPlan and calls wrangler only inside them", () => {
-    // The spy tests above prove the mapping; this pins that deploy.mjs
+    // The spy tests above prove the mapping; this pins that deploy.ts
     // actually uses it. Every wrangler invocation must live inside the `ops`
     // object handed to the shared executor — a bare call added elsewhere
     // would bypass the mapping the spies verify.
-    const source = readFileSync("scripts/deploy/deploy.mjs", "utf8");
+    const source = readFileSync("scripts/deploy/deploy.ts", "utf8");
     expect(source).toContain("executeDeployPlan({ skipBuild, preflightOnly }, ops)");
     const opsStart = source.indexOf("const ops = {");
     expect(opsStart).toBeGreaterThan(-1);
@@ -194,7 +194,7 @@ describe("private deliverable provisioning", () => {
   // Asserts the INVARIANT (deliverables live in their own bucket), not the
   // literal default name: CI overwrites wrangler.jsonc by rendering the
   // template, so this file is not necessarily the committed one at test time.
-  const bucketFor = (config, binding) =>
+  const bucketFor = (config: string, binding: string) =>
     config.match(
       new RegExp(`"binding"\\s*:\\s*"${binding}"[\\s\\S]*?"bucket_name"\\s*:\\s*"([^"]+)"`),
     )?.[1] ?? null;
