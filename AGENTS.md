@@ -14,6 +14,7 @@
 | `src/pages/`          | Routes: storefront, admin, api, images, sitemap                      |
 | `src/themes/<theme>/` | Templates + `tokens.css` (`@theme` block)                            |
 | `src/middleware.ts`   | Admin auth gate (fail-closed)                                        |
+| `config/`             | `theme.config.json` and `wrangler.template.jsonc`                    |
 | `mcp/`                | Standalone MCP Worker — own `package.json` / `node_modules`          |
 | `db/migrations/`      | Additive D1 migrations (numbered, never rewrite)                     |
 | `db/seeds/`           | Seed SQL (`seed.sql`, demo catalog)                                  |
