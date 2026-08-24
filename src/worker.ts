@@ -1,7 +1,6 @@
 import { handle } from "@astrojs/cloudflare/handler";
 import { env } from "cloudflare:workers";
 import { sweepStaleNotifications } from "./features/email/outbox";
-import { resolveGuestKek } from "./features/orders/guestAccess.ts";
 import { releaseExpiredReservations } from "./features/orders/reservations";
 import { getSetting } from "./features/settings/db";
 
@@ -44,7 +43,7 @@ async function runScheduledSweeps(): Promise<void> {
   try {
     const origin = await getSetting(db, "store_url");
     if (origin) {
-      await sweepStaleNotifications(db, origin, resolveGuestKek(env));
+      await sweepStaleNotifications(db, origin);
     }
   } catch (err) {
     console.error("Scheduled notification sweep failed:", err);

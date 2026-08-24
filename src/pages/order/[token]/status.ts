@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { env } from "cloudflare:workers";
 import { isAccessToken } from "../../../features/ids/token.ts";
-import { resolveAccessToken, resolveGuestKek } from "../../../features/orders/guestAccess.ts";
+import { resolveAccessToken } from "../../../features/orders/guestAccess.ts";
 import { getOrderByPublicId, listOrderItems } from "../../../features/orders/db.ts";
 import {
   expireSelfRenderedReservation,
@@ -31,7 +31,7 @@ export const GET: APIRoute = async ({ params, request }) => {
   if (!token || !isAccessToken(token)) {
     return new Response(JSON.stringify({ error: "Not found" }), { status: 404, headers });
   }
-  const access = await resolveAccessToken(env.DB, token, resolveGuestKek(env));
+  const access = await resolveAccessToken(env.DB, token);
   if (!access)
     return new Response(JSON.stringify({ error: "Not found" }), { status: 404, headers });
 

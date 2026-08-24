@@ -1,5 +1,5 @@
 /* source(none): Tailwind v4 otherwise auto-scans the whole project for class
-   names, and that reach is a real defect here — tests/baselines/*.txt hold
+   names, and that reach is a real defect here — test/baselines/*.txt hold
    rendered HTML of the DEFAULT theme, so every build re-acquired default's
    utilities through its own test fixtures no matter which theme was selected
    (found when a sentinel utility survived into a Studio build's CSS). Docs

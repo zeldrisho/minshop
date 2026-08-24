@@ -10,7 +10,6 @@ import {
 import { parsePublicId } from "../../features/ids/publicId.ts";
 import {
   claimOrderIdentity,
-  resolveGuestKek,
   deleteGuestAccessIfUnsettled,
 } from "../../features/orders/guestAccess.ts";
 import { lineUnitPriceCents } from "../../features/cart/key";
@@ -372,7 +371,7 @@ export const POST: APIRoute = async ({ request, cookies, url, redirect }) => {
   // handoff: the ord_ id ties reservation → pending payment → settled order,
   // and the access token is the only thing guest URLs carry. success_url points
   // at /order/<token>; the webhook stores the ord_ id on the order.
-  const { publicId, accessToken } = await claimOrderIdentity(env.DB, resolveGuestKek(env));
+  const { publicId, accessToken } = await claimOrderIdentity(env.DB);
   const items = reservationItems(lines);
   const reserved = await reserveInventory(
     env.DB,
@@ -812,10 +811,7 @@ async function handleJsonCheckout(request: Request, url: URL): Promise<Response>
   }
 
   if (method === "lightning" && shippingOn && shipTo && chosen && inAppQuote) {
-    const { publicId: lnPublicId, accessToken: lnAccessToken } = await claimOrderIdentity(
-      env.DB,
-      resolveGuestKek(env),
-    );
+    const { publicId: lnPublicId, accessToken: lnAccessToken } = await claimOrderIdentity(env.DB);
     const lnReserved = await reserveInventory(
       env.DB,
       lnPublicId,
@@ -914,7 +910,7 @@ async function handleJsonCheckout(request: Request, url: URL): Promise<Response>
     }
   }
 
-  const { publicId, accessToken } = await claimOrderIdentity(env.DB, resolveGuestKek(env));
+  const { publicId, accessToken } = await claimOrderIdentity(env.DB);
   const provider = await getPaymentProvider(method);
   const items = reservationItems(lines);
   const reserved = await reserveInventory(

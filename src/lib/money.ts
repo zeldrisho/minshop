@@ -12,35 +12,14 @@
  * multiples of 10. Add an override map here if you ever sell in those.
  */
 
-// `new Intl.NumberFormat` is expensive to construct, so cache one formatter per
-// currency and reuse it (a product listing calls this once per item).
-const priceFormatters = new Map<string, Intl.NumberFormat>();
-const currencyDecimalsCache = new Map<string, number>();
-
 /** Decimal places a currency uses (2 USD, 0 JPY, 3 BHD). */
 export function currencyDecimals(currency: string): number {
-  const code = currency.toUpperCase();
-  const cached = currencyDecimalsCache.get(code);
-  if (cached !== undefined) return cached;
-  // Reuse the formatter cache when available to avoid constructing two
-  // Intl.NumberFormat instances per call (one for decimals, one for formatting).
-  const formatter = priceFormatters.get(code);
-  let decimals: number;
-  if (formatter !== undefined) {
-    decimals = formatter.resolvedOptions().maximumFractionDigits ?? 2;
-  } else {
-    try {
-      decimals =
-        new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: code,
-        }).resolvedOptions().maximumFractionDigits ?? 2;
-    } catch {
-      decimals = 2;
-    }
-  }
-  currencyDecimalsCache.set(code, decimals);
-  return decimals;
+  return (
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency.toUpperCase(),
+    }).resolvedOptions().maximumFractionDigits ?? 2
+  );
 }
 
 /** Minor units per major unit (100 USD, 1 JPY, 1000 BHD). */
@@ -58,55 +37,9 @@ export function toMajorUnits(minor: number, currency: string): number {
   return minor / minorUnitsPerMajor(currency);
 }
 
-/**
- * Stripe diverges from ISO 4217 for a handful of currencies. Keep storage on
- * ISO scale (currencyDecimals) and convert only at the Stripe boundary.
- * - HUF, UGX, ISK: ISO 2, Stripe 0 (charge in whole units)
- * - BHD, JOD, KWD, OMR, TND: ISO 3, Stripe 2 (charge in hundredths, must be multiple of 10)
- * See https://docs.stripe.com/currencies#zero-decimal and 3-decimal handling.
- */
-const STRIPE_ZERO_DECIMAL = new Set([
-  "BIF",
-  "CLP",
-  "DJF",
-  "GNF",
-  "JPY",
-  "KMF",
-  "KRW",
-  "MGA",
-  "PYG",
-  "RWF",
-  "UGX",
-  "VND",
-  "VUV",
-  "XAF",
-  "XOF",
-  "XPF",
-  "HUF",
-  "ISK",
-  "TWD",
-]);
-const STRIPE_THREE_TO_TWO = new Set(["BHD", "JOD", "KWD", "OMR", "TND"]);
-
-export function stripeCurrencyDecimals(currency: string): number {
-  const code = currency.toUpperCase();
-  if (STRIPE_ZERO_DECIMAL.has(code)) return 0;
-  if (STRIPE_THREE_TO_TWO.has(code)) return 2;
-  return currencyDecimals(currency);
-}
-
-/**
- * Convert stored ISO minor units to Stripe's expected unit_amount.
- * Storage stays ISO; only the adapter scales for Stripe's quirks.
- */
-export function toStripeAmount(storedMinor: number, currency: string): number {
-  const iso = currencyDecimals(currency);
-  const stripe = stripeCurrencyDecimals(currency);
-  if (iso === stripe) return storedMinor;
-  // e.g. HUF ISO 2 → Stripe 0: 1999 (19.99) → 20; BHD ISO 3 → Stripe 2: 2500 (2.5) → 250
-  const scale = 10 ** Math.abs(iso - stripe);
-  return iso > stripe ? Math.round(storedMinor / scale) : storedMinor * scale;
-}
+// `new Intl.NumberFormat` is expensive to construct, so cache one formatter per
+// currency and reuse it (a product listing calls this once per item).
+const priceFormatters = new Map<string, Intl.NumberFormat>();
 
 /**
  * Format minor units for display, in an EXPLICIT currency.

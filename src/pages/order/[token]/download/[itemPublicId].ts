@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 import { env } from "cloudflare:workers";
 import { isAccessToken } from "../../../../features/ids/token.ts";
 import { parsePublicId } from "../../../../features/ids/publicId.ts";
-import { resolveAccessToken, resolveGuestKek } from "../../../../features/orders/guestAccess.ts";
+import { resolveAccessToken } from "../../../../features/orders/guestAccess.ts";
 import { getOrderByPublicId } from "../../../../features/orders/db.ts";
 import { getFileStorage } from "../../../../features/storage/index.ts";
 
@@ -33,7 +33,7 @@ export const GET: APIRoute = async ({ params }) => {
   const itemPublicId = parsePublicId(params.itemPublicId, "orderItem");
   if (!token || !isAccessToken(token) || !itemPublicId)
     return new Response("Not found", { status: 404, headers: PRIVATE_HEADERS });
-  const access = await resolveAccessToken(env.DB, token, resolveGuestKek(env));
+  const access = await resolveAccessToken(env.DB, token);
   if (!access) return new Response("Not found", { status: 404, headers: PRIVATE_HEADERS });
   const order = access ? await getOrderByPublicId(env.DB, access.order_public_id) : null;
   if (!order)

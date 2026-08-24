@@ -7,7 +7,6 @@ import type {
 } from "./provider";
 import { STRIPE_CHECKOUT_TTL_SECONDS } from "./provider";
 import { stripeAllowedCountries } from "./stripeCountries.ts";
-import { toStripeAmount } from "../../lib/money.ts";
 
 /**
  * Determines the delivery mode encoded in Stripe rate metadata.
@@ -57,7 +56,7 @@ export function createStripeProvider(secretKey: string, webhookSecret: string): 
         line_items: params.lineItems.map((li) => ({
           price_data: {
             currency: li.currency,
-            unit_amount: toStripeAmount(li.amountCents, li.currency),
+            unit_amount: li.amountCents,
             // Stripe Tax requires a tax_behavior on inline prices; 'exclusive' =
             // tax added on top of the listed price (typical for US).
             ...(params.automaticTax && { tax_behavior: "exclusive" as const }),
@@ -94,7 +93,7 @@ export function createStripeProvider(secretKey: string, webhookSecret: string): 
               type: "fixed_amount" as const,
               display_name: o.label,
               fixed_amount: {
-                amount: toStripeAmount(o.amountCents, params.lineItems[0]?.currency ?? "usd"),
+                amount: o.amountCents,
                 currency: params.lineItems[0]?.currency ?? "usd",
               },
               // The mode travels as rate metadata because the label is merchant

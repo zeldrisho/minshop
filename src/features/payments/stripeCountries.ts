@@ -7,7 +7,7 @@
  * the zone calculator.
  *
  * Split out of `stripe.ts` so it stays pure: no SDK client, no Worker env, so both
- * unit tests and scripts/check/check-stripe-countries.mjs can load it directly.
+ * unit tests and scripts/check/check-stripe-countries.ts can load it directly.
  */
 
 import { COUNTRY_CODES, isCountryCode } from "../shipping/countries.ts";
@@ -17,7 +17,7 @@ import { COUNTRY_CODES, isCountryCode } from "../shipping/countries.ts";
  * `Stripe.Checkout.SessionCreateParams.ShippingAddressCollection.AllowedCountry`
  * union. Derived, not judged: a hand-guessed list both dropped valid destinations
  * and included codes Stripe rejects, and the second kind fails session creation
- * outright. `scripts/check/check-stripe-countries.mjs` fails the build if this drifts
+ * outright. `scripts/check/check-stripe-countries.ts` fails the build if this drifts
  * from the installed SDK.
  */
 export const STRIPE_UNSUPPORTED: ReadonlySet<string> = new Set([
