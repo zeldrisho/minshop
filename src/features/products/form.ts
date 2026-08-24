@@ -42,8 +42,16 @@ export function parseProductForm(
     String(form.get("currency") ?? "usd")
       .trim()
       .toLowerCase() || "usd";
-  // Scale by the chosen currency's minor units (so 1000 JPY stores as 1000, not 100000).
-  const price_cents = toMinorUnits(price, currency);
+  if (!/^[a-z]{3}$/u.test(currency)) {
+    return { error: "Currency must be a 3-letter code." };
+  }
+  let price_cents: number;
+  try {
+    // Scale by the chosen currency's minor units (so 1000 JPY stores as 1000, not 100000).
+    price_cents = toMinorUnits(price, currency);
+  } catch {
+    return { error: "Currency is not supported." };
+  }
   const description = String(form.get("description") ?? "").trim() || null;
   // Unchecked checkboxes submit nothing, so absence means inactive.
   const active = form.get("active") != null ? 1 : 0;

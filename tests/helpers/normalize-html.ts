@@ -58,7 +58,7 @@ export function normalizeHeaders(headers: Headers): string {
     const value = headers.get(name);
     if (value == null) return [];
     return [
-      `${name}: ${value.replace(PUBLIC_ID, (_m: string, prefix: string) => `${prefix}_<id>`)}}`,
+      `${name}: ${value.replace(PUBLIC_ID, (_m: string, prefix: string) => `${prefix}_<id>`)}`,
     ];
   }).join("\n");
 }

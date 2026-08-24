@@ -59,6 +59,8 @@ describe("the document shell", () => {
   it("keeps the drawer outside the store-owned header", () => {
     // A fixed dialog nested inside the sticky, backdrop-filtered header would
     // take the header as its containing block and mis-position.
+    expect(markup).toContain("data-cart-drawer");
+    expect(markup).toContain("<StoreFooter");
     expect(markup.indexOf("data-cart-drawer")).toBeGreaterThan(markup.indexOf("<StoreFooter"));
   });
 

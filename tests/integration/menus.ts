@@ -32,7 +32,7 @@ import {
 // ceiling holds even when the table is overfilled behind the guard's back, and
 // that the migration's seed reproduces what a store already renders.
 //
-// Schema is hand-rolled to the production shape, matching test-media.ts.
+// Schema is hand-rolled to the production shape, matching tests/integration/media.ts.
 // tests/integration/d1-integration.sh remains the sole full-migration gate.
 
 const mf = new Miniflare({

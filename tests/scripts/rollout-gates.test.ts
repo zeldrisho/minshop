@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-// Deliberately .ts, not .ts, for the same reason as tests/storefront/boundary.test.ts:
+// Deliberately .ts, not .mjs, for the same reason as tests/storefront/boundary.test.ts:
 // tsconfig's `types` is pinned to the Cloudflare types, so node builtins have no
 // declarations and a .ts file here fails `astro check`.
 import { readFileSync } from "node:fs";

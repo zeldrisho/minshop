@@ -22,7 +22,7 @@ import { resolveHomePath, homeTargetIsValid } from "../../src/features/settings/
 // association INSERTs actually serialize against each other, and that bulk
 // usage agrees with the delete guard about what "in use" means.
 //
-// Schema is hand-rolled to the production shape, matching test-refunds.ts and
+// Schema is hand-rolled to the production shape, matching tests/integration/refunds.ts and
 // tests/integration/reservations.ts. tests/integration/d1-integration.sh remains the sole
 // full-migration gate, so schema drift is caught in exactly one place.
 

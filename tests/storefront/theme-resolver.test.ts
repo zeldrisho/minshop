@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vite-plus/test";
+import { afterAll, afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -25,8 +25,20 @@ function fixture(ids: string[], config?: string) {
   return root;
 }
 
-afterEach(() => {
+// resolveTheme() gives process.env.THEME precedence over fixture configuration,
+// so an inherited THEME would steer these tests. Park the caller's value and
+// restore it afterwards instead of deleting it for good.
+const originalTheme = process.env.THEME;
+
+beforeEach(() => {
   delete process.env.THEME;
+});
+
+afterAll(() => {
+  if (originalTheme !== undefined) process.env.THEME = originalTheme;
+});
+
+afterEach(() => {
   while (roots.length) rmSync(roots.pop()!, { recursive: true, force: true });
 });
 

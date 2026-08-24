@@ -38,7 +38,7 @@ const getLabelRecord = (...args: Parameters<typeof _getLabelRecord>): Promise<an
 // path, that the fingerprint-guarded replacement refuses to clobber a repair made
 // meanwhile, and that the missing-weight count reflects real variant inheritance.
 //
-// Schema is hand-rolled to the production shape, matching test-menus.ts.
+// Schema is hand-rolled to the production shape, matching tests/integration/menus.ts.
 // tests/integration/d1-integration.sh remains the sole full-migration gate.
 
 const mf = new Miniflare({

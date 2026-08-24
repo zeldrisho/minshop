@@ -153,9 +153,10 @@ for table in media page_media pages; do
   fi
 done
 
-backfill="$(vp exec wrangler d1 execute DB --local --persist-to "$state_dir" \
-  --command "SELECT COUNT(*) AS missing FROM (SELECT image_key FROM product_images UNION SELECT image_key FROM products WHERE image_key IS NOT NULL AND image_key != '') refs LEFT JOIN media m ON m.image_key = refs.image_key WHERE m.id IS NULL;")"
-if [[ "$backfill" != *"0"* ]]; then
+backfill="$(vp exec wrangler d1 execute DB --local --persist-to "$state_dir" --json \
+  --command "SELECT COUNT(*) AS missing FROM (SELECT image_key FROM product_images UNION SELECT image_key FROM products WHERE image_key IS NOT NULL AND image_key != '') refs LEFT JOIN media m ON m.image_key = refs.image_key WHERE m.id IS NULL;" | \
+  node -e 'let s=""; process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(String(JSON.parse(s)[0].results[0].missing)))')"
+if [[ "$backfill" -ne 0 ]]; then
   echo "D1 integration failed: product image keys missing from media" >&2
   exit 1
 fi
@@ -640,7 +641,7 @@ fi
 # the build still succeeds and every scheduled sweep silently stops running —
 # which is invisible until a store notices stock stuck on hold. Assert the built
 # artifact really exposes the handler.
-scheduled_status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
+scheduled_status="$(curl --max-time 30 --silent --output /dev/null --write-out '%{http_code}' \
   "http://127.0.0.1:$test_port/cdn-cgi/handler/scheduled")"
 if [[ "$scheduled_status" != "200" ]]; then
   echo "D1 integration failed: built worker exposes no scheduled handler (got $scheduled_status)" >&2
