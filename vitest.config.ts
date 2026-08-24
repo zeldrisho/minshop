@@ -29,7 +29,14 @@ export default getViteConfig(
   {
     test: {
       environment: "node",
-      include: ["src/**/*.test.ts", "tests/storefront/**/*.test.ts", "tests/scripts/**/*.test.ts"],
+      // src/pages is excluded from colocation on purpose: every file there
+      // becomes a public route, so its tests live in tests/pages instead.
+      include: [
+        "src/**/*.test.ts",
+        "tests/storefront/**/*.test.ts",
+        "tests/scripts/**/*.test.ts",
+        "tests/pages/**/*.test.ts",
+      ],
       alias: {
         "#theme": theme.dir,
         // Mirrors astro.config.ts: if a test ever renders something that
