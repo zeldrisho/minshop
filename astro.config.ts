@@ -39,12 +39,8 @@ const themeStamp = {
   },
 };
 
-// Held in a variable rather than inline: `platformProxy` is forwarded verbatim
-// to @cloudflare/vite-plugin and is absent from the adapter's re-exported
-// Options type, which an inline literal's excess-property check would reject.
 const cloudflareAdapterOptions = {
   imageService: "passthrough",
-  platformProxy: { enabled: true },
 } as const;
 
 export default defineConfig({

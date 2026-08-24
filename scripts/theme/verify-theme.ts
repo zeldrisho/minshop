@@ -28,7 +28,7 @@ const steps: [string, string[]][] = [
   ["vp", ["exec", "vitest", "run", "tests/storefront"]],
   ["vp", ["exec", "astro", "check", "--tsconfig", tsconfig]],
   ["vp", ["exec", "astro", "build"]],
-  ["node", ["scripts/check/check-built-css.ts"]],
+  ["node", ["--experimental-strip-types", "scripts/check/check-built-css.ts"]],
 ];
 
 for (const [cmd, args] of steps) {

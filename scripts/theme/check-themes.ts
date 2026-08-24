@@ -25,7 +25,7 @@
  * reported error names the whole chain, because "this control is binding-aware"
  * is not actionable without knowing which hop introduced it.
  *
- * Usage: node scripts/theme/check-themes.ts [dir...]
+ * Usage: node --experimental-strip-types scripts/theme/check-themes.ts [dir...]
  */
 import { readdir, readFile, stat } from "node:fs/promises";
 import { dirname, join, normalize, relative } from "node:path";
@@ -90,7 +90,7 @@ const DENIED_MODULES = [
   { name: "node:fs", why: "filesystem access" },
 ];
 
-const SOURCE_EXTENSIONS = [".astro", ".ts", ".tsx", ".js"];
+const SOURCE_EXTENSIONS = [".astro", ".ts", ".tsx", ".mjs", ".js"];
 
 /**
  * Comments are stripped before scanning. Storefront files are expected to

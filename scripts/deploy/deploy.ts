@@ -7,7 +7,7 @@ import { signDeployPurgeAuthorization } from "../../src/features/cache/deployPur
 import { resolveTheme } from "../theme/themes.ts";
 import { executeDeployPlan } from "./deploy-plan.ts";
 
-const root = resolve(import.meta.dirname, "..");
+const root = resolve(import.meta.dirname, "../..");
 const args = process.argv.slice(2);
 const skipBuild = args.includes("--skip-build");
 const preflightOnly = args.includes("--preflight-only");

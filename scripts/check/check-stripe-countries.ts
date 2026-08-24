@@ -31,6 +31,6 @@ if (failures === 0) {
   console.log(`  ✓ catch-all expansion matches the pinned SDK (${expanded.length} countries)`);
   console.log("stripe country check passed");
 } else {
-  console.error("\nUpdate STRIPE_UNSUPPORTED in src/features/payments/stripe.ts");
+  console.error("\nUpdate STRIPE_UNSUPPORTED in src/features/payments/stripeCountries.ts");
   process.exit(1);
 }
