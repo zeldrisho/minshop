@@ -1,7 +1,7 @@
 /**
  * The deploy sequence and its artifact gate, as pure functions.
  *
- * deploy.mjs executes what this module returns and nothing else. That split
+ * deploy.ts executes what this module returns and nothing else. That split
  * exists for one reason: the ordering — validate the selection and the built
  * artifact BEFORE touching remote state — is a safety property, and safety
  * properties need regression tests. A test cannot usefully run wrangler, but
@@ -11,8 +11,11 @@
  */
 
 /** Step names, in execution order, for a given flag combination. */
-export function deployPlan({ skipBuild = false, preflightOnly = false } = {}) {
-  const steps = [];
+export function deployPlan({
+  skipBuild = false,
+  preflightOnly = false,
+}: { skipBuild?: boolean; preflightOnly?: boolean } = {}): string[] {
+  const steps: string[] = [];
   if (!skipBuild) steps.push("build");
   // The two gates run before ANY remote mutation, in every variant.
   steps.push("validate-stamp", "cache-config");
@@ -25,12 +28,20 @@ export function deployPlan({ skipBuild = false, preflightOnly = false } = {}) {
  * The artifact gate. `raw` is the stamp file's content, or null when the file
  * does not exist. Throws with an actionable message; returns the stamped id.
  */
-export function validateStamp({ raw, expectedTheme, skipBuild = false }) {
+export function validateStamp({
+  raw,
+  expectedTheme,
+  skipBuild = false,
+}: {
+  raw: string | null;
+  expectedTheme: string;
+  skipBuild?: boolean;
+}): string {
   if (raw == null) {
     throw new Error(
       skipBuild
         ? "dist/ carries no theme stamp. Rebuild (omit --skip-build) so the artifact records which theme it contains."
-        : "The build finished but wrote no theme stamp — the theme-stamp integration is missing from astro.config.mjs.",
+        : "The build finished but wrote no theme stamp — the theme-stamp integration is missing from astro.config.ts.",
     );
   }
   let stamped;
@@ -57,7 +68,7 @@ export function validateStamp({ raw, expectedTheme, skipBuild = false }) {
 
 /**
  * Execute the plan against injected operations. This IS the step→side-effect
- * mapping — deploy.mjs supplies the real operations and adds nothing else, so
+ * mapping — deploy.ts supplies the real operations and adds nothing else, so
  * a test can run this exact function with spies and assert that a failing
  * stamp leaves the migration and deploy operations uncalled. Testing only the
  * plan's step ORDER cannot prove that: a refactor could run the migration
@@ -76,9 +87,23 @@ export function validateStamp({ raw, expectedTheme, skipBuild = false }) {
  * Throws (rather than exiting) on a failed gate; the caller decides how to
  * report. Steps after a throw never run.
  */
-export async function executeDeployPlan({ skipBuild = false, preflightOnly = false } = {}, ops) {
-  let cacheConfig;
-  const handlers = {
+export async function executeDeployPlan(
+  {
+    skipBuild = false,
+    preflightOnly = false,
+  }: { skipBuild?: boolean; preflightOnly?: boolean } = {},
+  ops: {
+    expectedTheme: string;
+    readStamp(): string | null;
+    build(): unknown;
+    loadCacheConfig(): any;
+    migrate(): unknown;
+    deploy(): unknown;
+    purge(cacheConfig: any): unknown | Promise<unknown>;
+  },
+) {
+  let cacheConfig: any;
+  const handlers: Record<string, () => unknown | Promise<unknown>> = {
     build: () => ops.build(),
     "validate-stamp": () =>
       validateStamp({ raw: ops.readStamp(), expectedTheme: ops.expectedTheme, skipBuild }),

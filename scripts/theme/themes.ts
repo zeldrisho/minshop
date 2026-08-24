@@ -1,7 +1,7 @@
 /**
  * The one place that decides which theme is active.
  *
- * Imported by astro.config.mjs, vitest.config.ts, the generated-CSS step, the
+ * Imported by astro.config.ts, vitest.config.ts, the generated-CSS step, the
  * boundary checker, and deploy validation. Nothing re-derives the id: two
  * readers with slightly different rules eventually disagree, and the symptom is
  * a build that compiles one design and styles another.
@@ -26,12 +26,12 @@ export const RESERVED_THEME_IDS = ["default", "studio", "market"];
  *  directory name, an import specifier, and a configuration value. */
 const THEME_ID = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 
-export function isValidThemeId(id) {
+export function isValidThemeId(id: unknown): boolean {
   return typeof id === "string" && id.length > 0 && id.length <= 40 && THEME_ID.test(id);
 }
 
 /** Turn a free-form name into a usable id, or null when nothing survives. */
-export function normalizeThemeId(name) {
+export function normalizeThemeId(name: unknown): string | null {
   const slug = String(name ?? "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -50,7 +50,7 @@ export function normalizeThemeId(name) {
  *  artifacts, and the CI matrix at once — every guard reports green on a theme
  *  none of them saw. Dot-prefixed entries (editor and OS droppings) and plain
  *  files are still ignored; they are not attempts at a theme. */
-export function discoverThemeIds(root = process.cwd()) {
+export function discoverThemeIds(root = process.cwd()): string[] {
   const dir = resolve(root, THEMES_DIR);
   if (!existsSync(dir)) return [];
   const ids = [];
@@ -73,7 +73,7 @@ export function discoverThemeIds(root = process.cwd()) {
   return ids.sort();
 }
 
-export function themePath(id, root = process.cwd()) {
+export function themePath(id: string, root = process.cwd()): string {
   if (!isValidThemeId(id)) throw new Error(themeError(`"${id}" is not a valid theme id.`, root));
   // Resolved and re-checked rather than concatenated: an id that escaped the
   // parent would be a path-traversal bug in a build script.
@@ -84,11 +84,11 @@ export function themePath(id, root = process.cwd()) {
   return dir;
 }
 
-function themeError(message, root) {
+function themeError(message: string, root: string): string {
   // Discovery itself throws on misnamed theme directories. Here it is only
   // decorating another error, so fall back to an empty list rather than
   // letting the decoration mask the actual failure.
-  let available;
+  let available: string[];
   try {
     available = discoverThemeIds(root);
   } catch {
@@ -142,14 +142,15 @@ export function resolveConfiguredTheme(root = process.cwd()) {
   try {
     parsed = JSON.parse(readFileSync(file, "utf8"));
   } catch (error) {
-    throw new Error(themeError(`${CONFIG_FILE} is not valid JSON: ${error.message}`, root));
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(themeError(`${CONFIG_FILE} is not valid JSON: ${message}`, root));
   }
   const id = typeof parsed?.theme === "string" ? parsed.theme.trim() : "";
   if (!id) throw new Error(themeError(`${CONFIG_FILE} has no "theme" string.`, root));
   return validateTheme(id, CONFIG_FILE, root);
 }
 
-function validateTheme(id, source, root) {
+function validateTheme(id: string, source: string, root: string) {
   if (!isValidThemeId(id)) {
     throw new Error(themeError(`${source} names "${id}", which is not a valid theme id.`, root));
   }

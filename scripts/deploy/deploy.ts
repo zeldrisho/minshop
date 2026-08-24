@@ -4,10 +4,10 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { signDeployPurgeAuthorization } from "../../src/features/cache/deployPurgeAuth.ts";
-import { resolveTheme } from "../theme/themes.mjs";
-import { executeDeployPlan } from "./deploy-plan.mjs";
+import { resolveTheme } from "../theme/themes.ts";
+import { executeDeployPlan } from "./deploy-plan.ts";
 
-const root = resolve(import.meta.dirname, "../..");
+const root = resolve(import.meta.dirname, "..");
 const args = process.argv.slice(2);
 const skipBuild = args.includes("--skip-build");
 const preflightOnly = args.includes("--preflight-only");
@@ -20,7 +20,7 @@ const stampPath = resolve(root, "dist/theme.json");
 const theme = resolveTheme(root);
 console.log(`Deploying theme: ${theme.id} (from ${theme.source})`);
 
-function run(command, args) {
+function run(command: string, args: string[]) {
   const result = spawnSync(command, args, {
     cwd: root,
     env: process.env,
@@ -30,9 +30,9 @@ function run(command, args) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-function parseDevVars(path) {
+function parseDevVars(path: string): Record<string, string> {
   if (!existsSync(path)) return {};
-  const values = {};
+  const values: Record<string, string> = {};
   for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
     const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
     if (!match) continue;
@@ -84,9 +84,10 @@ function deploymentCacheConfig() {
   return { crossVersion: true, origin, secret };
 }
 
-const wait = (milliseconds) => new Promise((resolveWait) => setTimeout(resolveWait, milliseconds));
+const wait = (milliseconds: number) =>
+  new Promise((resolveWait) => setTimeout(resolveWait, milliseconds));
 
-async function purgeAfterDeploy(origin, secret) {
+async function purgeAfterDeploy(origin: string, secret: string) {
   // The custom domain can briefly continue routing to the previous version
   // after Wrangler reports success. Keep retrying long enough for that
   // propagation window as well as transient purge-plane rate limits.
@@ -130,7 +131,7 @@ async function purgeAfterDeploy(origin, secret) {
 
 // The real operations, and NOTHING outside them. Which step invokes which
 // operation is decided by executeDeployPlan — the shared, spy-testable
-// mapping in deploy-plan.mjs — so tests/scripts/deploy-plan.test.mjs proves a
+// mapping in deploy-plan.ts — so tests/scripts/deploy-plan.test.ts proves a
 // failing stamp leaves migrate/deploy uncalled against the SAME code that
 // runs here. Defining an extra wrangler call in this file, outside `ops`,
 // is the regression that split exists to prevent.
@@ -141,7 +142,7 @@ const ops = {
   loadCacheConfig: () => deploymentCacheConfig(),
   migrate: () => run("vp", ["exec", "wrangler", "d1", "migrations", "apply", "DB", "--remote"]),
   deploy: () => run("vp", ["exec", "wrangler", "deploy"]),
-  purge: (cacheConfig) => purgeAfterDeploy(cacheConfig.origin, cacheConfig.secret),
+  purge: (cacheConfig: any) => purgeAfterDeploy(cacheConfig.origin, cacheConfig.secret),
 };
 
 try {
