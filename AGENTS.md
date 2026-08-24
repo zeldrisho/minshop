@@ -6,21 +6,18 @@
 
 ## Project Layout
 
-| Path                               | Purpose                                                              |
-| ---------------------------------- | -------------------------------------------------------------------- |
-| `src/config.ts`                    | Schema + defaults (upstream-owned); `getConfig()` is source of truth |
-| `src/store.config.ts`              | Build-time overrides (deep-merged on top)                            |
-| `src/features/`                    | Vertical slices — each owns db, types, components                    |
-| `src/pages/`                       | Routes: storefront, admin, api, images, sitemap                      |
-| `src/themes/<theme>/`              | Templates + `tokens.css` (`@theme` block)                            |
-| `src/middleware.ts`                | Admin auth gate (fail-closed)                                        |
-| `mcp/`                             | Standalone MCP Worker — own `package.json` / `node_modules`          |
-| `db/migrations/`                   | Additive D1 migrations (numbered, never rewrite)                     |
-| `db/seeds/`                        | Seed SQL (`seed.sql`, demo catalog)                                  |
-| `config/`                          | Theme selection, wrangler template                                   |
-| `tools/`                           | Custom oxlint plugin (`anti-slop`)                                   |
-| `scripts/{db,theme,deploy,check}/` | Ops scripts grouped by domain                                        |
-| `tests/`                           | Integration, fixtures, baselines, contract suites                    |
+| Path                  | Purpose                                                              |
+| --------------------- | -------------------------------------------------------------------- |
+| `src/config.ts`       | Schema + defaults (upstream-owned); `getConfig()` is source of truth |
+| `src/store.config.ts` | Build-time overrides (deep-merged on top)                            |
+| `src/features/`       | Vertical slices — each owns db, types, components                    |
+| `src/pages/`          | Routes: storefront, admin, api, images, sitemap                      |
+| `src/themes/<theme>/` | Templates + `tokens.css` (`@theme` block)                            |
+| `src/middleware.ts`   | Admin auth gate (fail-closed)                                        |
+| `config/`             | `theme.config.json` and `wrangler.template.jsonc`                    |
+| `mcp/`                | Standalone MCP Worker — own `package.json` / `node_modules`          |
+| `db/migrations/`      | Additive D1 migrations (numbered, never rewrite)                     |
+| `db/seeds/`           | Seed SQL (`seed.sql`, demo catalog)                                  |
 
 ## Commands
 

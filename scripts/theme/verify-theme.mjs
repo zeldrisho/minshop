@@ -24,6 +24,7 @@ const { id, source } = resolveTheme();
 const tsconfig = relative(process.cwd(), themeTsconfigPath(id));
 console.log(`verify:theme — ${id} (from ${source})`);
 
+/** @type {Array<[string, string[]]>} */
 const steps = [
   ["vp", ["exec", "vitest", "run", "tests/storefront"]],
   ["vp", ["exec", "astro", "check", "--tsconfig", tsconfig]],
