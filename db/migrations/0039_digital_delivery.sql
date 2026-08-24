@@ -58,12 +58,8 @@ BEGIN
     SELECT NEW.public_id, public_id FROM orders WHERE id = NEW.order_id;
 END;
 
--- order_id is in the UPDATE OF list on purpose: moving an item to another
--- order changes neither public_id nor the registry row by itself, which would
--- leave order_item_ids pointing at the old order and let a digital entitlement
--- resolve to the wrong one.
 CREATE TRIGGER IF NOT EXISTS trg_order_item_public_id_update
-BEFORE UPDATE OF public_id, order_id ON order_items
+BEFORE UPDATE OF public_id ON order_items
 WHEN NEW.public_id IS NOT NULL
 BEGIN
   SELECT RAISE(ABORT, 'order item public ID belongs to another order')
