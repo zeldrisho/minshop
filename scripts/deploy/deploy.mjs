@@ -3,11 +3,11 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { signDeployPurgeAuthorization } from "../src/features/cache/deployPurgeAuth.ts";
-import { resolveTheme } from "./themes.mjs";
+import { signDeployPurgeAuthorization } from "../../src/features/cache/deployPurgeAuth.ts";
+import { resolveTheme } from "../theme/themes.mjs";
 import { executeDeployPlan } from "./deploy-plan.mjs";
 
-const root = resolve(import.meta.dirname, "..");
+const root = resolve(import.meta.dirname, "../..");
 const args = process.argv.slice(2);
 const skipBuild = args.includes("--skip-build");
 const preflightOnly = args.includes("--preflight-only");

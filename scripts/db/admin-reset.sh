@@ -4,7 +4,7 @@
 # `settings` table, which drops the store back into BOOTSTRAP mode — /admin/setup
 # reopens so you can set a new password (see src/middleware.ts).
 #
-#   Usage:  scripts/admin-reset.sh [--remote] [--yes]
+#   Usage:  scripts/db/admin-reset.sh [--remote] [--yes]
 #   --remote: target the DEPLOYED D1 (default: the local .wrangler/state store).
 #   --yes:    skip the confirmation prompt.
 #

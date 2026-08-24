@@ -9,7 +9,7 @@ import { markdownExcerpt, renderMarkdown } from "../pages/markdown.ts";
 import { productImageSources, productImageUrl, type ImageDelivery } from "../products/image";
 import { stockState } from "../products/stock";
 import { catalogPath } from "../settings/home";
-import { formatMoney, toMajorUnits, currencyDecimals } from "../../money";
+import { formatMoney, toMajorUnits, currencyDecimals } from "../../lib/money";
 import { requirePublicId } from "../catalog/serialize";
 import { buildProductCard } from "./productCard";
 import type {

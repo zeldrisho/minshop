@@ -4,9 +4,9 @@
 #   its own D1 database, public-image and private-file R2 buckets, Worker, and
 #   secrets (AUTH_SECRET + SECRETS_KEK).
 #   FREE-PLAN default — optional integrations (Vectorize/AI, Images, send_email) are
-#   opt-in via wrangler.template.jsonc (see the comments there).
+#   opt-in via config/wrangler.template.jsonc (see the comments there).
 #
-#   Usage:  scripts/provision-cf.sh <slug>
+#   Usage:  scripts/db/provision-cf.sh <slug>
 #   <slug>: lowercase letters/digits/hyphens, e.g. "acme-store".
 #
 # Deploys via the SAME path as `vp run deploy` (the Astro adapter integrates with
@@ -19,7 +19,7 @@ set -euo pipefail
 
 SLUG="${1:-}"
 if [[ ! "$SLUG" =~ ^[a-z][a-z0-9-]{1,40}$ ]]; then
-  echo "usage: scripts/provision-cf.sh <slug>   (lowercase a-z, 0-9, '-')" >&2
+  echo "usage: scripts/db/provision-cf.sh <slug>   (lowercase a-z, 0-9, '-')" >&2
   exit 1
 fi
 
@@ -37,11 +37,11 @@ restore() { [ -f wrangler.jsonc.bak ] && mv -f wrangler.jsonc.bak wrangler.jsonc
 trap restore EXIT
 
 # Before creating ANY remote resource: the theme selection must resolve.
-# Read-only — a broken theme.config.json used to surface only after the
+# Read-only — a broken config/theme.config.json used to surface only after the
 # database and bucket already existed on the account.
 echo "▸ [0/5] Validating theme selection…"
 node --input-type=module -e "
-  import { resolveTheme } from './scripts/themes.mjs';
+  import { resolveTheme } from './scripts/theme/themes.mjs';
   const s = resolveTheme();
   console.log('    theme: ' + s.id + ' (from ' + s.source + ')');
 "
@@ -59,7 +59,7 @@ $W r2 bucket create "$FILES_BUCKET"
 echo "    Keep this bucket private: do not enable r2.dev or attach a custom domain."
 
 # FREE-PLAN DEFAULT: D1 + R2 only. Semantic search (Workers AI + Vectorize) is
-# opt-in: create the index and add its bindings to wrangler.template.jsonc (see
+# opt-in: create the index and add its bindings to config/wrangler.template.jsonc (see
 # the comments there), then re-run/redeploy.
 
 echo "▸ [3/5] Rendering instance config → wrangler.jsonc (original backed up)…"
@@ -71,7 +71,7 @@ sed -e "s/__NAME__/$SLUG/g" \
     -e "s/__DB_ID__/$DB_ID/g" \
     -e "s/__BUCKET__/$BUCKET/g" \
     -e "s/__FILES_BUCKET__/$FILES_BUCKET/g" \
-    wrangler.template.jsonc > wrangler.jsonc
+    config/wrangler.template.jsonc > wrangler.jsonc
 
 echo "▸ [4/5] Applying migrations + building…"
 $W d1 migrations apply DB --remote
@@ -103,5 +103,5 @@ cat <<EOF
   with Cloudflare Access on a public deploy.
 
   Then open the store and finish onboarding at /admin/setup.
-  Tear it all down with:  scripts/destroy-cf.sh $SLUG
+  Tear it all down with:  scripts/db/destroy-cf.sh $SLUG
 EOF

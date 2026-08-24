@@ -1,13 +1,13 @@
 import { readFileSync } from "node:fs";
-import { COUNTRY_CODES } from "../src/features/shipping/countries.ts";
-import { stripeAllowedCountries } from "../src/features/payments/stripeCountries.ts";
+import { COUNTRY_CODES } from "../../src/features/shipping/countries.ts";
+import { stripeAllowedCountries } from "../../src/features/payments/stripeCountries.ts";
 
 // The catch-all expansion sends Stripe every country we know MINUS a denylist. If
 // that denylist drifts from the installed SDK's AllowedCountry union, a "Rest of
 // world" store either loses valid destinations or fails session creation outright
 // — neither is visible until a real checkout. So diff the two here.
 const sdkSource = readFileSync(
-  new URL("../node_modules/stripe/esm/resources/Checkout/Sessions.d.ts", import.meta.url),
+  new URL("../../node_modules/stripe/esm/resources/Checkout/Sessions.d.ts", import.meta.url),
   "utf8",
 );
 const start = sdkSource.indexOf("type AllowedCountry =");

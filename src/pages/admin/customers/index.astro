@@ -4,7 +4,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { formatPrice, formatDate, getConfig } from '../../../config';
 import { countCustomers, listCustomers } from '../../../features/customers/db';
 import { orderByClause } from '../../../features/customers/sort';
-import { paginate, queryHref } from '../../../pagination';
+import { paginate, queryHref } from '../../../lib/pagination';
 import Pagination from '../../../components/Pagination.astro';
 
 const sort = Astro.url.searchParams.get('sort');

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import { readFileSync } from "node:fs";
-import { deployPlan, executeDeployPlan, validateStamp } from "../../scripts/deploy-plan.mjs";
+import { deployPlan, executeDeployPlan, validateStamp } from "../../scripts/deploy/deploy-plan.mjs";
 
 // The deploy ordering is a safety property: a failed or mis-selected build
 // must leave remote state untouched. deploy.mjs executes exactly what
@@ -178,7 +178,7 @@ describe("deploy.mjs stays on the executor", () => {
     // actually uses it. Every wrangler invocation must live inside the `ops`
     // object handed to the shared executor — a bare call added elsewhere
     // would bypass the mapping the spies verify.
-    const source = readFileSync("scripts/deploy.mjs", "utf8");
+    const source = readFileSync("scripts/deploy/deploy.mjs", "utf8");
     expect(source).toContain("executeDeployPlan({ skipBuild, preflightOnly }, ops)");
     const opsStart = source.indexOf("const ops = {");
     expect(opsStart).toBeGreaterThan(-1);
@@ -201,7 +201,7 @@ describe("private deliverable provisioning", () => {
 
   it("binds a distinct private bucket in both deployment configs", () => {
     const committed = readFileSync("wrangler.jsonc", "utf8");
-    const template = readFileSync("wrangler.template.jsonc", "utf8");
+    const template = readFileSync("config/wrangler.template.jsonc", "utf8");
     for (const config of [committed, template]) {
       const images = bucketFor(config, "BUCKET");
       const files = bucketFor(config, "FILES");
@@ -217,7 +217,9 @@ describe("private deliverable provisioning", () => {
   // not to the workflow only fails in CI, after a push. Pin the two together.
   it("substitutes every template placeholder in CI", () => {
     const placeholders = [
-      ...new Set(readFileSync("wrangler.template.jsonc", "utf8").match(/__[A-Z_]+__/g) ?? []),
+      ...new Set(
+        readFileSync("config/wrangler.template.jsonc", "utf8").match(/__[A-Z_]+__/g) ?? [],
+      ),
     ];
     const workflow = readFileSync(".github/workflows/verify.yml", "utf8");
     expect(placeholders.length).toBeGreaterThan(0);
@@ -229,8 +231,8 @@ describe("private deliverable provisioning", () => {
   });
 
   it("records the per-instance bucket and preserves that record if deletion fails", () => {
-    const provision = readFileSync("scripts/provision-cf.sh", "utf8");
-    const destroy = readFileSync("scripts/destroy-cf.sh", "utf8");
+    const provision = readFileSync("scripts/db/provision-cf.sh", "utf8");
+    const destroy = readFileSync("scripts/db/destroy-cf.sh", "utf8");
     expect(provision).toContain('FILES_BUCKET="${SLUG}-files"');
     expect(provision).toContain('echo "FILES_BUCKET=$FILES_BUCKET"');
     expect(destroy).toContain("recorded_files_bucket=");

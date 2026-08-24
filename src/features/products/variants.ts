@@ -1,6 +1,6 @@
 import type { D1Database } from "@cloudflare/workers-types";
 import { listProductImages } from "./db";
-import { toMinorUnits } from "../../money";
+import { toMinorUnits } from "../../lib/money";
 import { toGrams, type WeightUnit } from "../shipping/weight";
 import { withPublicId } from "../ids/publicId.ts";
 

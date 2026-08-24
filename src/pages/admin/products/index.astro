@@ -5,7 +5,7 @@ import { formatPrice } from '../../../config';
 import { listAllProducts, countAllProducts } from '../../../features/products/db';
 import ProductImage from '../../../features/products/ProductImage.astro';
 import { orderByClause } from '../../../features/products/sort';
-import { paginate, queryHref } from '../../../pagination';
+import { paginate, queryHref } from '../../../lib/pagination';
 import Pagination from '../../../components/Pagination.astro';
 import { menuReferencesFor } from '../../../features/navigation/admin';
 import FilterBar from '../../../components/FilterBar.astro';

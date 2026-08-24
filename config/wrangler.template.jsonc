@@ -1,5 +1,5 @@
 {
-  // Template for a provisioned instance. scripts/provision-cf.sh fills the __…__
+  // Template for a provisioned instance. scripts/db/provision-cf.sh fills the __…__
   // placeholders, renders this to ./wrangler.jsonc, deploys, then restores the
   // original. Keep shared runtime settings in sync with wrangler.jsonc; bindings
   // intentionally differ because this template defaults to free-plan resources.
@@ -30,7 +30,7 @@
   // Fresh instances begin on workers.dev and therefore stay uncached. A later
   // custom-domain config may enable this only alongside CANONICAL_ORIGIN and
   // workers_dev: false. cross_version_cache additionally requires a shared
-  // CACHE_PURGE_SECRET so scripts/deploy.mjs can purge after every deploy.
+  // CACHE_PURGE_SECRET so scripts/deploy/deploy.mjs can purge after every deploy.
   "cache": { "enabled": false },
   "ratelimits": [
     {

@@ -8,7 +8,7 @@
 # to another directory and run this there — each copy keeps its own local data.
 # (This is the local counterpart to provision-cf.sh, which creates a cloud instance.)
 #
-#   Usage:  scripts/provision-local.sh [--seed] [--no-build]
+#   Usage:  scripts/db/provision-local.sh [--seed] [--no-build]
 #   --seed:     load ./db/seeds/seed.sql after migrating.
 #   --no-build: skip `astro build` (reuse the existing dist/ — faster reruns).
 #
