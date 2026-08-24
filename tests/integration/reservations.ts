@@ -54,7 +54,7 @@ try {
     .run();
   const product = await db
     .prepare("SELECT id FROM products WHERE slug = 'reserved-product'")
-    .first();
+    .first<any>();
   assert(product?.id);
 
   const item = {
@@ -72,7 +72,9 @@ try {
        VALUES ('prod_many123456', 'Many lines', 'many-lines', '', 1, 'usd', 100, 1)`,
     )
     .run();
-  const manyProduct = await db.prepare("SELECT id FROM products WHERE slug = 'many-lines'").first();
+  const manyProduct = await db
+    .prepare("SELECT id FROM products WHERE slug = 'many-lines'")
+    .first<any>();
   const manyId = crypto.randomUUID();
   const manyItems = Array.from({ length: 60 }, (_, index) => ({
     productId: manyProduct.id,
@@ -97,7 +99,7 @@ try {
     .bind(statusExpiryId)
     .run();
   assert.equal(await expireSelfRenderedReservation(db, statusExpiryId), true);
-  assert.equal((await getSettlementReservation(db, statusExpiryId)).status, "expired");
+  assert.equal((await getSettlementReservation(db, statusExpiryId))!.status, "expired");
 
   // Cache invalidation follows rendered state, not every decrement. Product
   // quantities purge only when they cross in/low/out; variant quantities purge
@@ -110,10 +112,12 @@ try {
     .run();
   const transitionProduct = await db
     .prepare("SELECT id FROM products WHERE slug = 'transition-product'")
-    .first();
+    .first<any>();
   assert(transitionProduct?.id);
-  const purges = [];
-  const collectPurge = async (ids) => purges.push([...ids]);
+  const purges: string[][] = [];
+  const collectPurge = async (ids: string[]): Promise<void> => {
+    purges.push([...ids]);
+  };
   const transitionItem = {
     productId: transitionProduct.id,
     name: "Transition product",
@@ -147,7 +151,7 @@ try {
   const transitionVariant = await db
     .prepare("SELECT id FROM product_variants WHERE product_id = ? AND label = 'Limited'")
     .bind(transitionProduct.id)
-    .first();
+    .first<any>();
   assert(transitionVariant?.id);
   const variantItem = { ...transitionItem, variantId: transitionVariant.id };
   const firstVariant = crypto.randomUUID();
@@ -174,13 +178,14 @@ try {
   ]);
   assert.equal(concurrent.filter(Boolean).length, 1);
   assert.equal(
-    (await db.prepare("SELECT stock FROM products WHERE id = ?").bind(product.id).first()).stock,
+    (await db.prepare("SELECT stock FROM products WHERE id = ?").bind(product.id).first<any>())
+      .stock,
     1,
   );
 
   const active = await db
     .prepare("SELECT public_id FROM checkout_reservations WHERE status = 'active'")
-    .first();
+    .first<any>();
   assert(active?.public_id);
   await markInventoryReservationPaymentPending(db, active.public_id);
   await db
@@ -194,7 +199,8 @@ try {
   assert.equal(await releaseInventoryReservation(db, active.public_id), true);
   assert.equal(await releaseInventoryReservation(db, active.public_id), false);
   assert.equal(
-    (await db.prepare("SELECT stock FROM products WHERE id = ?").bind(product.id).first()).stock,
+    (await db.prepare("SELECT stock FROM products WHERE id = ?").bind(product.id).first<any>())
+      .stock,
     5,
   );
 
@@ -214,7 +220,8 @@ try {
   assert(await recordPaidOrder(db, paid));
   assert.equal(await recordPaidOrder(db, paid), null);
   assert.equal(
-    (await db.prepare("SELECT stock FROM products WHERE id = ?").bind(product.id).first()).stock,
+    (await db.prepare("SELECT stock FROM products WHERE id = ?").bind(product.id).first<any>())
+      .stock,
     3,
   );
   assert.equal(
@@ -222,11 +229,11 @@ try {
       await db
         .prepare("SELECT status FROM checkout_reservations WHERE public_id = ?")
         .bind(reservationId)
-        .first()
+        .first<any>()
     ).status,
     "settled",
   );
-  assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM order_items").first()).n, 1);
+  assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM order_items").first<any>()).n, 1);
 
   // Demo uses the same hold-and-settle lifecycle: checkout decrements once,
   // approval settles the hold, and settlement cannot decrement a second time.
@@ -238,7 +245,7 @@ try {
     .run();
   const demoProduct = await db
     .prepare("SELECT id FROM products WHERE slug = 'demo-product'")
-    .first();
+    .first<any>();
   assert(demoProduct?.id);
   const demoReservationId = crypto.randomUUID();
   const demoItem = {
@@ -249,7 +256,7 @@ try {
   };
   assert.equal(await reserveInventory(db, demoReservationId, [demoItem], 600, "demo"), true);
   assert.equal(
-    (await db.prepare("SELECT stock FROM products WHERE id = ?").bind(demoProduct.id).first())
+    (await db.prepare("SELECT stock FROM products WHERE id = ?").bind(demoProduct.id).first<any>())
       .stock,
     1,
   );
@@ -266,7 +273,7 @@ try {
     }),
   );
   assert.equal(
-    (await db.prepare("SELECT stock FROM products WHERE id = ?").bind(demoProduct.id).first())
+    (await db.prepare("SELECT stock FROM products WHERE id = ?").bind(demoProduct.id).first<any>())
       .stock,
     1,
   );
@@ -275,7 +282,7 @@ try {
       await db
         .prepare("SELECT status FROM checkout_reservations WHERE public_id = ?")
         .bind(demoReservationId)
-        .first()
+        .first<any>()
     ).status,
     "settled",
   );
@@ -296,12 +303,12 @@ try {
       await db
         .prepare("SELECT status FROM checkout_reservations WHERE public_id = ?")
         .bind(expiredDemoId)
-        .first()
+        .first<any>()
     ).status,
     "expired",
   );
   assert.equal(
-    (await db.prepare("SELECT stock FROM products WHERE id = ?").bind(demoProduct.id).first())
+    (await db.prepare("SELECT stock FROM products WHERE id = ?").bind(demoProduct.id).first<any>())
       .stock,
     1,
   );
@@ -324,12 +331,13 @@ try {
       await db
         .prepare("SELECT status FROM checkout_reservations WHERE public_id = ?")
         .bind(expiredId)
-        .first()
+        .first<any>()
     ).status,
     "expired",
   );
   assert.equal(
-    (await db.prepare("SELECT stock FROM products WHERE id = ?").bind(product.id).first()).stock,
+    (await db.prepare("SELECT stock FROM products WHERE id = ?").bind(product.id).first<any>())
+      .stock,
     3,
   );
 
@@ -352,22 +360,26 @@ try {
       await db
         .prepare("SELECT status FROM checkout_reservations WHERE public_id = ?")
         .bind(hostedId)
-        .first()
+        .first<any>()
     ).status,
     "active",
   );
   assert.equal(
-    (await db.prepare("SELECT stock FROM products WHERE id = ?").bind(product.id).first()).stock,
+    (await db.prepare("SELECT stock FROM products WHERE id = ?").bind(product.id).first<any>())
+      .stock,
     2,
   );
   assert.equal(await releaseInventoryReservation(db, hostedId), true);
   assert.equal(
-    (await db.prepare("SELECT stock FROM products WHERE id = ?").bind(product.id).first()).stock,
+    (await db.prepare("SELECT stock FROM products WHERE id = ?").bind(product.id).first<any>())
+      .stock,
     3,
   );
 
   // A pre-0021 pending row has no explicit reservation and keeps legacy stock settlement.
   const legacy = pendingToPaidOrder({
+    // Pre-0021 row shape, deliberately looser than the current PendingPayment type.
+    ...({} as any),
     id: 1,
     public_id: crypto.randomUUID(),
     payment_hash: "legacy-payment",
@@ -394,7 +406,8 @@ try {
     .run();
   assert(await recordPaidOrder(db, legacy));
   assert.equal(
-    (await db.prepare("SELECT stock FROM products WHERE id = ?").bind(product.id).first()).stock,
+    (await db.prepare("SELECT stock FROM products WHERE id = ?").bind(product.id).first<any>())
+      .stock,
     2,
   );
   // The batched settle: recording the order flipped its pending row.
@@ -402,7 +415,7 @@ try {
     (
       await db
         .prepare("SELECT status FROM pending_payments WHERE payment_hash = 'legacy-payment'")
-        .first()
+        .first<any>()
     ).status,
     "settled",
   );
@@ -415,7 +428,7 @@ try {
         WHERE state = 'pending'
           AND order_id = (SELECT id FROM orders WHERE provider_session_id = 'legacy-payment')`,
         )
-        .first()
+        .first<any>()
     ).n,
     2,
   );
@@ -444,19 +457,24 @@ try {
     (
       await db
         .prepare("SELECT status FROM pending_payments WHERE payment_hash = 'blocked-payment'")
-        .first()
+        .first<any>()
     ).status,
     "pending",
   );
   // ...and no outbox rows either: no order, no email intent. (6 = the three
   // successful orders above × two kinds; the blocked one added none.)
-  assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM order_notifications").first()).n, 6);
+  assert.equal(
+    (await db.prepare("SELECT COUNT(*) AS n FROM order_notifications").first<any>()).n,
+    6,
+  );
 
   // Outbox state machine against REAL D1 — the exact statements outboxStore.ts
   // ships, not a unit-test interpretation of them: claim exclusivity, expired-
   // lease reclaim, the fencing token, and the spent-attempts park.
   const nid = (
-    await db.prepare("SELECT id FROM orders WHERE provider_session_id = 'legacy-payment'").first()
+    await db
+      .prepare("SELECT id FROM orders WHERE provider_session_id = 'legacy-payment'")
+      .first<any>()
   ).id;
   const KIND = "customer-receipt";
   const notifRow = () =>
@@ -465,7 +483,7 @@ try {
         "SELECT state, attempts, lease_expires_at FROM order_notifications WHERE order_id = ? AND kind = ?",
       )
       .bind(nid, KIND)
-      .first();
+      .first<any>();
 
   // Claim wins once; a second claim against the live lease loses.
   assert.equal(await claimNotification(db, nid, KIND), 1);
@@ -504,7 +522,7 @@ try {
       "SELECT state, last_error FROM order_notifications WHERE order_id = ? AND kind = 'owner-notification'",
     )
     .bind(nid)
-    .first();
+    .first<any>();
   assert.equal(parked.state, "dead");
   assert.match(parked.last_error, /interrupted/);
 
@@ -519,7 +537,7 @@ try {
     .run();
   const lateProduct = await db
     .prepare("SELECT id FROM products WHERE slug = 'late-digital'")
-    .first();
+    .first<any>();
   const latePublicId = crypto.randomUUID();
   const lateItem = {
     productId: lateProduct.id,
@@ -532,7 +550,7 @@ try {
     fileSizeBytes: 123,
   };
   assert.equal(await reserveInventory(db, latePublicId, [lateItem], 600, "lightning"), true);
-  const beforeTerminal = await getSettlementReservation(db, latePublicId);
+  const beforeTerminal = (await getSettlementReservation(db, latePublicId))!;
   assert.ok(beforeTerminal?.items[0].publicId?.startsWith("itm_"));
   await db
     .prepare(
@@ -542,9 +560,9 @@ try {
     .run();
   await releaseExpiredReservations(db);
   await db.prepare("UPDATE products SET stock = 0 WHERE id = ?").bind(lateProduct.id).run();
-  const terminal = await getSettlementReservation(db, latePublicId);
+  const terminal: any = await getSettlementReservation(db, latePublicId);
   assert.equal(terminal?.status, "expired");
-  const lateOrder = {
+  const lateOrder: any = {
     providerSessionId: "late-paid-session",
     publicId: latePublicId,
     reservationId: latePublicId,
@@ -560,7 +578,7 @@ try {
     .prepare(
       "SELECT public_id, file_key, file_name FROM order_items WHERE order_id = (SELECT id FROM orders WHERE provider_session_id = 'late-paid-session')",
     )
-    .first();
+    .first<any>();
   assert.equal(lateSaved.public_id, beforeTerminal.items[0].publicId);
   assert.equal(lateSaved.file_key, "deliverables/file-a.pdf");
   assert.equal(lateSaved.file_name, "file-a.pdf");
@@ -568,7 +586,7 @@ try {
     .prepare(
       "SELECT public_id, requested_qty, consumed_qty, shortfall_qty FROM order_inventory_exceptions WHERE order_id = (SELECT id FROM orders WHERE provider_session_id = 'late-paid-session')",
     )
-    .first();
+    .first<any>();
   assert.ok(exception.public_id.startsWith("iexc_"));
   assert.deepEqual(
     [exception.requested_qty, exception.consumed_qty, exception.shortfall_qty],
@@ -599,7 +617,7 @@ try {
     .run();
   const rollbackProduct = await db
     .prepare("SELECT id FROM products WHERE slug = 'rollback-tee'")
-    .first();
+    .first<any>();
   const r2PublicId = crypto.randomUUID();
   const r2ItemId = "itm_r2publish01";
   const r2Items = [
@@ -626,7 +644,7 @@ try {
     db.prepare("UPDATE products SET stock = stock - 1 WHERE id = ?").bind(rollbackProduct.id),
   ]);
 
-  const r2Snapshot = await getSettlementReservation(db, r2PublicId);
+  const r2Snapshot = (await getSettlementReservation(db, r2PublicId)) as any;
   assert.equal(
     r2Snapshot.items[0].publicId,
     r2ItemId,
@@ -649,7 +667,7 @@ try {
     .prepare(
       "SELECT public_id FROM order_items WHERE order_id = (SELECT id FROM orders WHERE provider_session_id = 'r2-reservation-r1-settlement')",
     )
-    .first();
+    .first<any>();
   assert.equal(
     r2Settled.public_id,
     r2ItemId,
@@ -658,11 +676,15 @@ try {
   const r2Claims = await db
     .prepare("SELECT COUNT(*) AS n FROM order_item_ids WHERE order_public_id = ?")
     .bind(r2PublicId)
-    .first();
+    .first<any>();
   assert.equal(r2Claims.n, 1, "no duplicate claim was minted for an already-claimed identity");
   assert.equal(
-    (await db.prepare("SELECT stock FROM products WHERE id = ?").bind(rollbackProduct.id).first())
-      .stock,
+    (
+      await db
+        .prepare("SELECT stock FROM products WHERE id = ?")
+        .bind(rollbackProduct.id)
+        .first<any>()
+    ).stock,
     4,
     "an active reservation is not decremented twice at settlement",
   );
@@ -691,7 +713,7 @@ try {
       ]),
     )
     .run();
-  const confirming = await getReservationStatusSnapshot(db, r2StatusPublicId);
+  const confirming = (await getReservationStatusSnapshot(db, r2StatusPublicId))!;
   assert.equal(
     confirming.status,
     "active",
@@ -709,7 +731,7 @@ try {
     )
     .bind(r2StatusPublicId)
     .run();
-  const terminalSnapshot = await getReservationStatusSnapshot(db, r2StatusPublicId);
+  const terminalSnapshot = (await getReservationStatusSnapshot(db, r2StatusPublicId))!;
   assert.equal(
     terminalSnapshot.status,
     "expired",
@@ -736,7 +758,7 @@ try {
     .run();
   const attachedProduct = await db
     .prepare("SELECT id FROM products WHERE slug = 'attached-guide'")
-    .first();
+    .first<any>();
   const r3PublicId = crypto.randomUUID();
   // Drive the REAL builder over a file-bearing product row, not a hand-written
   // item: hand-writing the snapshot would pass even if checkout stopped copying
@@ -745,24 +767,25 @@ try {
   const attachedRow = await db
     .prepare("SELECT * FROM products WHERE id = ?")
     .bind(attachedProduct.id)
-    .first();
+    .first<any>();
   const [r3Item] = reservationItems([
     {
       product: attachedRow,
       qty: 1,
       name: "Attached guide",
       unitPriceCents: 900,
+      // Extra fixture field the builder is allowed to ignore.
       availableStock: attachedRow.stock,
       variantId: null,
     },
-  ]);
+  ] as any);
   assert.equal(
     r3Item.fileKey,
     "deliverables/attached/guide.pdf",
     "the builder copied the entitlement",
   );
   assert.equal(await reserveInventory(db, r3PublicId, [r3Item], 600, "stripe"), true);
-  const r3Snapshot = await getSettlementReservation(db, r3PublicId);
+  const r3Snapshot = (await getSettlementReservation(db, r3PublicId)) as any;
   assert.equal(
     r3Snapshot.items[0].fileKey,
     "deliverables/attached/guide.pdf",
@@ -787,7 +810,7 @@ try {
          FROM order_items
         WHERE order_id = (SELECT id FROM orders WHERE provider_session_id = 'r4-attached-r3-checkout')`,
     )
-    .first();
+    .first<any>();
   assert.deepEqual(
     [r3Settled.file_key, r3Settled.file_name, r3Settled.file_mime, r3Settled.file_size_bytes],
     ["deliverables/attached/guide.pdf", "guide.pdf", "application/pdf", 4096],
@@ -808,8 +831,10 @@ try {
      VALUES ('prod_purgeboundary', 'Last one', 'last-one', '', 400, 'usd', 1, 1)`,
     )
     .run();
-  const purgeProduct = await db.prepare("SELECT id FROM products WHERE slug = 'last-one'").first();
-  const purged = [];
+  const purgeProduct = await db
+    .prepare("SELECT id FROM products WHERE slug = 'last-one'")
+    .first<any>();
+  const purged: string[] = [];
   assert.equal(
     await reserveInventory(
       db,

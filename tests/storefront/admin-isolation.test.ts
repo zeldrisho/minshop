@@ -1,18 +1,18 @@
 import { describe, expect, it } from "vite-plus/test";
 import { readFileSync } from "node:fs";
 
-// Deliberately .mjs: reads source files, like boundary.test.mjs.
+// Deliberately .ts: reads source files, like boundary.test.ts.
 //
 // Admin is upstream chrome and must stay readable under ANY theme.
 // It once shared global.css, so Studio's near-black paper and film-grain body
 // texture landed behind every authenticated Admin page while core Admin text
 // stayed hardcoded dark — about 1.1:1. These assertions pin the isolation:
 // the Admin stylesheet entry must never pull in the active theme, and the
-// layout must use it. The compiled-CSS check (scripts/check/check-built-css.mjs)
+// layout must use it. The compiled-CSS check (scripts/check/check-built-css.ts)
 // verifies the same property in the built output.
 
-import { discoverThemeIds } from "../../scripts/theme/themes.mjs";
-import { GENERATED_CSS_DIR, writeThemeArtifacts } from "../../scripts/theme/theme-css.mjs";
+import { discoverThemeIds } from "../../scripts/theme/themes.ts";
+import { GENERATED_CSS_DIR, writeThemeArtifacts } from "../../scripts/theme/theme-css.ts";
 
 const admin = readFileSync("src/styles/admin.css", "utf8");
 const layout = readFileSync("src/layouts/AdminLayout.astro", "utf8");

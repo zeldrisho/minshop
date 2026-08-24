@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-// .mjs for the same reason as the sibling script tests: tsconfig's `types` is
+// .ts for the same reason as the sibling script tests: tsconfig's `types` is
 // pinned to the Cloudflare types, so node builtins have no declarations here.
 import { readdirSync, readFileSync } from "node:fs";
 
@@ -27,7 +27,7 @@ const MIGRATIONS = new URL("../../db/migrations/", import.meta.url);
 // closed at column zero masquerade as the terminus — exactly the shape wrangler
 // truncates on — so the close is always the LAST marker in the trigger's
 // region, and everything between BEGIN and it is held to the no-END rule.
-function triggerBodies(sql) {
+function triggerBodies(sql: string) {
   const starts = [...sql.matchAll(/CREATE TRIGGER/gi)];
   return starts.map((start, i) => {
     const region = sql.slice(start.index, i + 1 < starts.length ? starts[i + 1].index : undefined);

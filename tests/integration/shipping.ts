@@ -12,12 +12,12 @@ import {
 import { countProductsMissingWeight } from "../../src/features/shipping/sellability.ts";
 import {
   PURCHASE_LEASE_SECONDS,
-  claimPurchase,
+  claimPurchase as _claimPurchase,
+  getLabelRecord as _getLabelRecord,
   forceDiscardLabelAttempt,
   markLabelFailed,
   recordRefundedAttempt,
   discardLabelAttempt,
-  getLabelRecord,
   listLabelAttempts,
   markLabelUncertain,
   recordPurchased,
@@ -25,13 +25,20 @@ import {
 } from "../../src/features/shipping/labelStore.ts";
 import { fulfillOrder } from "../../src/features/orders/db.ts";
 
+// The harness asserts directly on nullable results without narrowing; these
+// loose aliases keep that readable while production code stays strictly typed.
+const claimPurchase = (...args: Parameters<typeof _claimPurchase>): Promise<any> =>
+  _claimPurchase(...args);
+const getLabelRecord = (...args: Parameters<typeof _getLabelRecord>): Promise<any> =>
+  _getLabelRecord(...args);
+
 // Merchant-managed shipping against a real D1. The properties here are the ones a
 // mocked database cannot show: that the revision guard actually serializes two
 // concurrent saves, that a malformed row cannot be overwritten by the ordinary
 // path, that the fingerprint-guarded replacement refuses to clobber a repair made
 // meanwhile, and that the missing-weight count reflects real variant inheritance.
 //
-// Schema is hand-rolled to the production shape, matching test-menus.mjs.
+// Schema is hand-rolled to the production shape, matching tests/integration/menus.ts.
 // tests/integration/d1-integration.sh remains the sole full-migration gate.
 
 const mf = new Miniflare({
@@ -42,13 +49,13 @@ const mf = new Miniflare({
 });
 
 let failures = 0;
-const check = async (name, fn) => {
+const check = async (name: string, fn: () => Promise<void>) => {
   try {
     await fn();
     console.log(`  ✓ ${name}`);
   } catch (err) {
     failures++;
-    console.error(`  ✗ ${name}\n    ${err.message}`);
+    console.error(`  ✗ ${name}\n    ${err instanceof Error ? err.message : err}`);
   }
 };
 
@@ -104,7 +111,7 @@ const zone = (name = "United States", amountCents = 600) => ({
   freeOverCents: null,
 });
 
-const document = (overrides = {}) => ({
+const document = (overrides: Record<string, unknown> = {}): any => ({
   enabled: true,
   packageWeightGrams: 0,
   zones: [zone()],
@@ -128,9 +135,13 @@ async function freshDb() {
   return db;
 }
 
-const readRaw = async (db) =>
-  (await db.prepare("SELECT value FROM settings WHERE key = ?").bind(SHIPPING_CONFIG_KEY).first())
-    ?.value ?? null;
+const readRaw = async (db: D1Database): Promise<string | null> =>
+  (
+    await db
+      .prepare("SELECT value FROM settings WHERE key = ?")
+      .bind(SHIPPING_CONFIG_KEY)
+      .first<any>()
+  )?.value ?? null;
 
 console.log("shipping (D1)");
 
@@ -239,14 +250,14 @@ await check("a failed save leaves the complete previous document intact", async 
 
 await check("missing-weight count honours variant inheritance", async () => {
   const db = await freshDb();
-  const addProduct = (id, weight, requires = 1, active = 1) =>
+  const addProduct = (id: number, weight: number | null, requires = 1, active = 1) =>
     db
       .prepare(
         "INSERT INTO products (id, name, active, weight_grams, requires_shipping) VALUES (?, ?, ?, ?, ?)",
       )
       .bind(id, `P${id}`, active, weight, requires)
       .run();
-  const addVariant = (productId, weight, active = 1) =>
+  const addVariant = (productId: number, weight: number | null, active = 1) =>
     db
       .prepare(
         "INSERT INTO product_variants (product_id, label, active, weight_grams) VALUES (?, ?, ?, ?)",
@@ -276,7 +287,7 @@ await check("missing-weight count honours variant inheritance", async () => {
 
 console.log("\nshipping labels (D1)");
 
-const addOrder = async (db, id, over = {}) => {
+const addOrder = async (db: D1Database, id: number, over: Record<string, unknown> = {}) => {
   await db
     .prepare(
       `INSERT INTO orders (id, public_id, status, fulfillment_status, delivery_method)
@@ -367,7 +378,7 @@ await check("manual fulfillment loses to an in-flight purchase, and vice versa",
   await claimPurchase(db, 1, "rate_1");
   // The claim is live: the manual path must refuse rather than race the charge.
   assert.equal(await fulfillOrder(db, 1, "usps", "MANUAL-1"), false);
-  const order = await db.prepare("SELECT fulfillment_status FROM orders WHERE id = 1").first();
+  const order = await db.prepare("SELECT fulfillment_status FROM orders WHERE id = 1").first<any>();
   assert.equal(order.fulfillment_status, "unfulfilled");
   // And the mirror: once manually fulfilled (no label row), a claim cannot start.
   await addOrder(db, 2);
@@ -401,7 +412,7 @@ await check("a forced fulfillment mid-purchase surfaces as a reconciliation stat
   // The shipped email must NOT go out carrying the manual tracking number.
   const note = await db
     .prepare(`SELECT 1 FROM order_notifications WHERE order_id = 1 AND kind = 'order-shipped'`)
-    .first();
+    .first<any>();
   assert.equal(note, null, "no shipped email for a tracking number that did not land");
 });
 
@@ -490,12 +501,12 @@ await check("a refund during the provider call blocks fulfillment and the email"
   assert.equal(result.orderFulfilled, false);
   const order = await db
     .prepare("SELECT fulfillment_status, tracking_number FROM orders WHERE id = 1")
-    .first();
+    .first<any>();
   assert.equal(order.fulfillment_status, "unfulfilled");
   assert.equal(order.tracking_number, null);
   const note = await db
     .prepare(`SELECT 1 FROM order_notifications WHERE order_id = 1 AND kind = 'order-shipped'`)
-    .first();
+    .first<any>();
   assert.equal(note, null, "no shipped email for a refunded order");
   const row = await getLabelRecord(db, 1);
   assert.equal(row.status, "purchased", "label record survives for reconciliation");
@@ -631,7 +642,7 @@ await check(
     const record = await getLabelRecord(db, 1);
     assert.equal(record.status, "purchased");
     assert.equal(record.transaction_id, "txn_1");
-    const order = await db.prepare("SELECT * FROM orders WHERE id = 1").first();
+    const order = await db.prepare("SELECT * FROM orders WHERE id = 1").first<any>();
     assert.equal(order.fulfillment_status, "fulfilled");
     assert.equal(order.tracking_number, "9400tracking");
     assert.equal(order.label_url, "https://labels.example/1.pdf");
@@ -639,7 +650,7 @@ await check(
       .prepare(
         `SELECT state FROM order_notifications WHERE order_id = 1 AND kind = 'order-shipped'`,
       )
-      .first();
+      .first<any>();
     assert.ok(note, "shipped notification queued in the same batch");
     // A purchased row is untouchable: no discard, no requote.
     assert.equal(await discardLabelAttempt(db, 1), false);

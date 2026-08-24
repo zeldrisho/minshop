@@ -3,7 +3,7 @@ import { experimental_AstroContainer as AstroContainer } from "astro/container";
 import Smoke from "./fixtures/smoke/Smoke.astro";
 
 // Guards the harness itself. If this fails, the Vitest/Astro wiring is broken
-// (or astro.config.mjs leaked back in) — no storefront contract is implicated.
+// (or astro.config.ts leaked back in) — no storefront contract is implicated.
 describe("AstroContainer harness", () => {
   it("renders an .astro component from props alone", async () => {
     const container = await AstroContainer.create();

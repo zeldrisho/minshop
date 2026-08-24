@@ -22,10 +22,10 @@ const ASSET_HASH = /\/_astro\/([A-Za-z0-9_.-]+?)\.[A-Za-z0-9_-]{8}\.(css|js)/g;
  *  (a lost scoped style is a real regression); the hash itself is not. */
 const ASTRO_CID = /data-astro-cid-[a-z0-9]+/g;
 
-export function normalizeHtml(html) {
+export function normalizeHtml(html: string): string {
   return (
     html
-      .replace(PUBLIC_ID, (_match, prefix) => `${prefix}_<id>`)
+      .replace(PUBLIC_ID, (_match: string, prefix: string) => `${prefix}_<id>`)
       .replace(ASSET_HASH, "/_astro/$1.<hash>.$2")
       .replace(ASTRO_CID, "data-astro-cid-<hash>")
       // One tag per line. The build minifies the document onto a single line,
@@ -35,7 +35,7 @@ export function normalizeHtml(html) {
       .replace(/></g, ">\n<")
       // Trailing whitespace only: internal indentation is structural evidence.
       .split("\n")
-      .map((line) => line.replace(/\s+$/, ""))
+      .map((line: string) => line.replace(/\s+$/, ""))
       .join("\n")
       .trim() + "\n"
   );
@@ -53,10 +53,12 @@ const PINNED_HEADERS = [
   "location",
 ];
 
-export function normalizeHeaders(headers) {
+export function normalizeHeaders(headers: Headers): string {
   return PINNED_HEADERS.flatMap((name) => {
     const value = headers.get(name);
     if (value == null) return [];
-    return [`${name}: ${value.replace(PUBLIC_ID, (_m, prefix) => `${prefix}_<id>`)}`];
+    return [
+      `${name}: ${value.replace(PUBLIC_ID, (_m: string, prefix: string) => `${prefix}_<id>`)}`,
+    ];
   }).join("\n");
 }

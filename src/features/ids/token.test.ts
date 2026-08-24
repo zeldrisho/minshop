@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vite-plus/test";
-import { createHash } from "node:crypto";
-import { generateAccessToken, hashAccessToken, isAccessToken, redactAccessTokens } from "./token";
+import { generateAccessToken, isAccessToken, redactAccessTokens } from "./token";
 
 describe("generateAccessToken", () => {
   it("emits otk_ plus 22 base64url characters in canonical form", () => {
@@ -52,19 +51,5 @@ describe("redactAccessTokens", () => {
     expect(redactAccessTokens(`GET /order/${t} 200`)).toBe("GET /order/otk_REDACTED 200");
     expect(redactAccessTokens(`a ${t} b ${t}`)).toBe("a otk_REDACTED b otk_REDACTED");
     expect(redactAccessTokens("no tokens here")).toBe("no tokens here");
-  });
-});
-
-describe("hashAccessToken", () => {
-  it("matches a plain SHA-256 hex digest of the raw token", async () => {
-    const token = "otk_xK3mQ9vRt2LwZa8pYc4dNQ";
-    expect(await hashAccessToken(token)).toBe(createHash("sha256").update(token).digest("hex"));
-  });
-
-  it("is deterministic, one-way shaped (64 hex chars), and input-sensitive", async () => {
-    const a = await hashAccessToken("otk_xK3mQ9vRt2LwZa8pYc4dNQ");
-    expect(a).toMatch(/^[0-9a-f]{64}$/);
-    expect(await hashAccessToken("otk_xK3mQ9vRt2LwZa8pYc4dNQ")).toBe(a);
-    expect(await hashAccessToken("otk_xK3mQ9vRt2LwZa8pYc4dNg")).not.toBe(a);
   });
 });

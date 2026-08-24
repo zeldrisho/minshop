@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { getOrder } from "../orders/db";
 import { getEmailProvider } from "../email";
 import { orderRefundedEmail } from "../email/orderConfirmation";
-import { guestOrderUrl, resolveGuestKek } from "../orders/guestAccess.ts";
+import { guestOrderUrl } from "../orders/guestAccess.ts";
 import { shouldSendCustomerOrderEmail } from "../email/orderPolicy";
 import { getConfig } from "../../config";
 import { getSetting } from "../settings/db";
@@ -33,7 +33,7 @@ export async function sendRefundNotice(
         deltaCents,
         order.refunded_cents,
         storeName,
-        await guestOrderUrl(env.DB, order.public_id, origin, resolveGuestKek(env)),
+        await guestOrderUrl(env.DB, order.public_id, origin),
       ),
     );
   } catch (err) {

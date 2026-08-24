@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-// Deliberately .mjs, not .ts, for the same reason as tests/storefront/boundary.test.mjs:
+// Deliberately .ts, not .mjs, for the same reason as tests/storefront/boundary.test.ts:
 // tsconfig's `types` is pinned to the Cloudflare types, so node builtins have no
 // declarations and a .ts file here fails `astro check`.
 import { readFileSync } from "node:fs";
@@ -24,13 +24,13 @@ import {
  * as "unknown or revoked", i.e. permanent loss), or a paid order records no
  * entitlement at all. Both fail silently, in production only.
  *
- * Cross-release BEHAVIOUR is covered in tests/integration/reservations.mjs, which
+ * Cross-release BEHAVIOUR is covered in tests/integration/reservations.ts, which
  * settles snapshots written in a higher release's shape.
  */
 
 const GATE_RE = /lifecycleActive|entitlementWriterActive|attachmentActive/;
 
-const source = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
+const source = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
 
 describe("digital-delivery rollout gates", () => {
   it("advances one release at a time, each threshold one above the last", () => {
@@ -72,7 +72,7 @@ describe("digital-delivery rollout gates", () => {
   // the product route gates upload and removal — so a file-level "contains a
   // gate somewhere" check goes on passing after any single one is removed. That
   // is exactly the case where an earlier release silently stops being dormant.
-  const countOf = (haystack, needle) => {
+  const countOf = (haystack: string, needle: string) => {
     // oxfmt switched single→double quotes; count either form by normalizing quotes
     const normalizedHaystack = haystack.replaceAll('"', "'");
     const normalizedNeedle = needle.replaceAll('"', "'");

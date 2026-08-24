@@ -9,13 +9,12 @@ import {
   normalizeThemeId,
   resolveTheme,
   themePath,
-} from "../../scripts/theme/themes.mjs";
+} from "../../scripts/theme/themes.ts";
 
-// .mjs: reads the filesystem, and tsconfig.compilerOptions.types is pinned to
-// the Cloudflare types. Same reason as boundary.test.mjs.
+// Reads the filesystem to exercise theme resolution against real directories.
 
-const roots = [];
-function fixture(ids, config) {
+const roots: string[] = [];
+function fixture(ids: string[], config?: string) {
   const root = mkdtempSync(join(tmpdir(), "theme-resolver-"));
   roots.push(root);
   for (const id of ids) mkdirSync(join(root, "src/themes", id), { recursive: true });
@@ -40,7 +39,7 @@ afterAll(() => {
 });
 
 afterEach(() => {
-  while (roots.length) rmSync(roots.pop(), { recursive: true, force: true });
+  while (roots.length) rmSync(roots.pop()!, { recursive: true, force: true });
 });
 
 describe("theme ids", () => {

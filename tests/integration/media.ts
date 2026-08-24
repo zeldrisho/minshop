@@ -22,8 +22,8 @@ import { resolveHomePath, homeTargetIsValid } from "../../src/features/settings/
 // association INSERTs actually serialize against each other, and that bulk
 // usage agrees with the delete guard about what "in use" means.
 //
-// Schema is hand-rolled to the production shape, matching test-refunds.mjs and
-// tests/integration/reservations.mjs. tests/integration/d1-integration.sh remains the sole
+// Schema is hand-rolled to the production shape, matching tests/integration/refunds.ts and
+// tests/integration/reservations.ts. tests/integration/d1-integration.sh remains the sole
 // full-migration gate, so schema drift is caught in exactly one place.
 
 const mf = new Miniflare({
@@ -34,31 +34,34 @@ const mf = new Miniflare({
 });
 
 let failures = 0;
-const check = async (name, fn) => {
+const check = async (name: string, fn: () => Promise<void>) => {
   try {
     await fn();
     console.log(`  ✓ ${name}`);
   } catch (err) {
     failures++;
-    console.error(`  ✗ ${name}\n    ${err.message}`);
+    console.error(`  ✗ ${name}\n    ${err instanceof Error ? err.message : err}`);
   }
 };
 
 /** In-memory StorageProvider with injectable failures. */
-function fakeStorage({ failPut = false, failDelete = false } = {}) {
-  const objects = new Map();
-  const deleted = [];
+function fakeStorage({
+  failPut = false,
+  failDelete = false,
+}: { failPut?: boolean; failDelete?: boolean } = {}): any {
+  const objects = new Map<string, { data: unknown; contentType: string }>();
+  const deleted: string[] = [];
   return {
     objects,
     deleted,
-    async put(key, data, contentType) {
+    async put(key: string, data: unknown, contentType: string) {
       if (failPut) throw new Error("storage put failed");
       objects.set(key, { data, contentType });
     },
-    async get(key) {
+    async get(key: string) {
       return objects.get(key) ?? null;
     },
-    async delete(key) {
+    async delete(key: string) {
       deleted.push(key);
       if (failDelete) throw new Error("storage delete failed");
       objects.delete(key);
@@ -69,7 +72,7 @@ function fakeStorage({ failPut = false, failDelete = false } = {}) {
 const png = (name = "photo.png") => new File([new Uint8Array(8)], name, { type: "image/png" });
 
 /** A real PNG header, so the dimension parser has something valid to read. */
-const pngSized = (w, h, name = "photo.png") => {
+const pngSized = (w: number, h: number, name = "photo.png") => {
   const b = new Uint8Array(24);
   b.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], 0);
   b.set([0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52], 8);
@@ -129,7 +132,7 @@ try {
     await db.prepare(sql).run();
   }
 
-  const newMedia = async (key, name = key) =>
+  const newMedia = async (key: string, name = key) =>
     createMediaRecord(db, {
       image_key: key,
       original_name: name,
@@ -193,10 +196,10 @@ try {
     // UNIQUE(image_key) + INSERT OR IGNORE: one row per key despite three refs.
     const dupes = await db
       .prepare("SELECT COUNT(*) c FROM media WHERE image_key = 'products/a.jpg'")
-      .first();
+      .first<any>();
     assert.equal(dupes.c, 1, "duplicate references created duplicate media rows");
     // Legacy rows carry no type/size — the grid must render them without it.
-    const legacy = adopted.find((m) => m.image_key === "products/a.jpg");
+    const legacy: any = adopted.find((m) => m.image_key === "products/a.jpg");
     assert.equal(legacy.mime_type, null);
     assert.equal(legacy.size_bytes, null);
     assert.equal(
@@ -243,7 +246,7 @@ try {
     const before = await countMedia(db);
     // uploadMedia takes db as a parameter, so the insert failure is injected
     // directly rather than contrived through a key collision.
-    const failingDb = {
+    const failingDb: any = {
       prepare() {
         throw new Error("d1 insert failed");
       },
@@ -317,7 +320,7 @@ try {
     assert.match(result.error, /no longer in the media library/);
     const rows = await db
       .prepare("SELECT COUNT(*) c FROM product_images WHERE product_id = 903")
-      .first();
+      .first<any>();
     assert.equal(rows.c, 0, "a dangling gallery row was created");
   });
 
@@ -340,7 +343,7 @@ try {
       .prepare(
         "SELECT image_key, position FROM product_images WHERE product_id = 905 ORDER BY position",
       )
-      .all();
+      .all<any>();
     assert.deepEqual(
       rows.results.map((r) => [r.image_key, r.position]),
       [
@@ -356,7 +359,7 @@ try {
     await db.prepare("INSERT INTO pages (id, title, slug) VALUES (2, 'FAQ', 'faq')").run();
     await syncPageMedia(db, 2, [a.id, b.id]);
     await syncPageMedia(db, 2, [b.id]);
-    const rows = await db.prepare("SELECT media_id FROM page_media WHERE page_id = 2").all();
+    const rows = await db.prepare("SELECT media_id FROM page_media WHERE page_id = 2").all<any>();
     assert.deepEqual(
       rows.results.map((r) => r.media_id),
       [b.id],
@@ -368,7 +371,9 @@ try {
     await db.prepare("INSERT INTO pages (id, title, slug) VALUES (3, 'Ship', 'ship')").run();
     await deleteMediaRecord(db, gone.id);
     await syncPageMedia(db, 3, [gone.id]);
-    const rows = await db.prepare("SELECT COUNT(*) c FROM page_media WHERE page_id = 3").first();
+    const rows = await db
+      .prepare("SELECT COUNT(*) c FROM page_media WHERE page_id = 3")
+      .first<any>();
     assert.equal(rows.c, 0, "a dangling page association was created");
   });
 
@@ -377,11 +382,15 @@ try {
   await check("logo is stored only while its media row exists", async () => {
     const m = await newMedia("media/logo-guard.png");
     assert.equal(await setLogoFromMedia(db, m.image_key), true, "valid key was refused");
-    const row = await db.prepare("SELECT value FROM settings WHERE key='logo_image_key'").first();
+    const row = await db
+      .prepare("SELECT value FROM settings WHERE key='logo_image_key'")
+      .first<any>();
     assert.equal(row.value, m.image_key);
     // A key that is not in the library must not be stored, even as an upsert.
     assert.equal(await setLogoFromMedia(db, "media/never-existed.png"), false);
-    const after = await db.prepare("SELECT value FROM settings WHERE key='logo_image_key'").first();
+    const after = await db
+      .prepare("SELECT value FROM settings WHERE key='logo_image_key'")
+      .first<any>();
     assert.equal(after.value, m.image_key, "a missing key overwrote a good logo");
     await db.prepare("DELETE FROM settings WHERE key='logo_image_key'").run();
   });
@@ -398,7 +407,7 @@ try {
     );
     const row = await db
       .prepare("SELECT image_key FROM product_images WHERE product_id = 910")
-      .first();
+      .first<any>();
     assert.equal(row.image_key, replacement.image_key);
 
     // Media deleted before the replacement lands: refuse, leave the gallery alone.
@@ -411,18 +420,18 @@ try {
     );
     const unchanged = await db
       .prepare("SELECT image_key FROM product_images WHERE product_id = 910")
-      .first();
+      .first<any>();
     assert.equal(unchanged.image_key, replacement.image_key, "gallery was left dangling");
   });
 
-  const seedPage = async (id, slug, published = 0) => {
+  const seedPage = async (id: number, slug: string, published = 0): Promise<any> => {
     await db
       .prepare("INSERT INTO pages (id, title, slug, published) VALUES (?, ?, ?, ?)")
       .bind(id, `Page ${id}`, slug, published)
       .run();
     return { id, title: `Page ${id}`, slug, body_markdown: "", published, layout: "standard" };
   };
-  const fieldsFor = (page, body, published) => ({
+  const fieldsFor = (page: any, body: string, published: number) => ({
     title: page.title,
     slug: page.slug,
     body_markdown: body,
@@ -437,7 +446,9 @@ try {
     const result = await savePageBody(db, page, fieldsFor(page, body, 1));
     assert.equal(result.published, 1, "a fully claimed page failed to publish");
     assert.equal(result.publishRefused, false);
-    const claims = await db.prepare("SELECT COUNT(*) c FROM page_media WHERE page_id = 21").first();
+    const claims = await db
+      .prepare("SELECT COUNT(*) c FROM page_media WHERE page_id = 21")
+      .first<any>();
     assert.equal(claims.c, 1, "association was not recorded");
   });
 
@@ -449,11 +460,11 @@ try {
     // The real race: the media row is resolved, then deleted before the claims
     // land. Injected by deleting inside the db wrapper at the moment the batch
     // runs, so this exercises savePageBody itself rather than a copy of its SQL.
-    const racingDb = {
-      prepare: (sql) => db.prepare(sql),
-      batch: async (statements) => {
+    const racingDb: any = {
+      prepare: (sql: string) => db.prepare(sql),
+      batch: async (statements: unknown[]) => {
         await db.prepare("DELETE FROM media WHERE id = ?").bind(m.id).run();
-        return db.batch(statements);
+        return db.batch(statements as D1PreparedStatement[]);
       },
     };
 
@@ -462,7 +473,7 @@ try {
     assert.equal(result.publishRefused, true, "the refusal was not reported");
     const saved = await db
       .prepare("SELECT published, body_markdown FROM pages WHERE id = 20")
-      .first();
+      .first<any>();
     assert.equal(saved.published, 0, "stored state disagrees with the result");
     assert.equal(saved.body_markdown, body, "the author lost their text");
   });
@@ -471,11 +482,11 @@ try {
     const m = await newMedia("media/atomic-live.png");
     const page = await seedPage(22, "atomic-live", 1);
     const body = `![x](/images/${m.image_key})`;
-    const racingDb = {
-      prepare: (sql) => db.prepare(sql),
-      batch: async (statements) => {
+    const racingDb: any = {
+      prepare: (sql: string) => db.prepare(sql),
+      batch: async (statements: unknown[]) => {
         await db.prepare("DELETE FROM media WHERE id = ?").bind(m.id).run();
-        return db.batch(statements);
+        return db.batch(statements as D1PreparedStatement[]);
       },
     };
     const result = await savePageBody(racingDb, page, fieldsFor(page, body, 1));
@@ -511,7 +522,7 @@ try {
     await db.batch(statements);
     const claimed = await db
       .prepare("SELECT COUNT(*) c FROM page_media WHERE page_id = 30")
-      .first();
+      .first<any>();
     assert.equal(claimed.c, 48, `expected 48 associations, got ${claimed.c}`);
   });
 
@@ -524,7 +535,7 @@ try {
     await db.batch(pageMediaClaimStatements(db, 31, ids));
     const claimed = await db
       .prepare("SELECT COUNT(*) c FROM page_media WHERE page_id = 31")
-      .first();
+      .first<any>();
     assert.equal(claimed.c, 200, `expected 200 associations, got ${claimed.c}`);
   });
 
