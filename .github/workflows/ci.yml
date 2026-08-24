@@ -1,4 +1,4 @@
-name: Verify
+name: CI
 
 on:
   pull_request:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: verify-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -62,8 +62,8 @@ jobs:
       - name: List themes not covered by the main job
         id: discover
         run: |
-          themes=$(node --input-type=module -e "
-            import { discoverThemeIds, resolveConfiguredTheme } from './scripts/theme/themes.mjs';
+          themes=$(node --experimental-strip-types --input-type=module -e "
+            import { discoverThemeIds, resolveConfiguredTheme } from './scripts/theme/themes.ts';
             const configured = resolveConfiguredTheme().id;
             console.log(JSON.stringify(discoverThemeIds().filter((id) => id !== configured)));
           ")

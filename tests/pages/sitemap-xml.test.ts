@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vite-plus/test";
-import { sitemapLocs } from "./sitemap.xml";
+import { sitemapLocs } from "../../src/pages/sitemap.xml";
 
 const origin = "https://shop.example";
 const data = {
