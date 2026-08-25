@@ -57,7 +57,7 @@ Keep `vp run verify` as defined in `AGENTS.md`: `theme:sync → vp test → astr
 
 ## 6. Scripts/tests — all `.mjs` converted to `.ts`
 
-**Context:** Fork still had `*.mjs` tooling alongside `*.ts` source. Node ≥22.6 runs
+**Context:** Fork still had `*.mjs` tooling alongside `*.ts` source. Node ≥24.11 runs (originally ≥22.6; bumped to 24.11 with the Node 24 upgrade)
 TS directly via `--experimental-strip-types` (already used by `deploy`), so the
 extension no longer buys anything. `*.astro` and `*.sh` stay by design.
 

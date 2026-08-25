@@ -15,7 +15,7 @@ Small, server-rendered store for Cloudflare Workers (D1 + R2) with a full admin,
 
 ## Scaffold a store
 
-> Requires Node ≥ 22.12 and Git.
+> Requires Node ≥ 24.11 and Git.
 
 ```sh
 git clone https://github.com/ddyy/minshop.git my-store

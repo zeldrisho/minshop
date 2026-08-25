@@ -4,7 +4,7 @@ How to build, run, and contribute to this fork of **minshop**.
 
 ## Prerequisites
 
-- **Node 22** — required toolchain is Node ≥ 22.12
+- **Node 24** — required toolchain is Node ≥ 24.11
 - **Git**, **pnpm** via `vp` (no global install needed)
 - `wrangler` is a devDependency — no global install needed
 

@@ -25,7 +25,7 @@ jobs:
       - name: Set up Vite+ (Node + pnpm)
         uses: voidzero-dev/setup-vp@v1.17.0
         with:
-          node-version: 22
+          node-version: 24
           cache: true
 
       - name: Install dependencies (storefront + mcp workspace)
@@ -97,7 +97,7 @@ jobs:
       - name: Set up Vite+ (Node + pnpm)
         uses: voidzero-dev/setup-vp@v1.17.0
         with:
-          node-version: 22
+          node-version: 24
           cache: true
 
       - name: Install dependencies (storefront + mcp workspace)

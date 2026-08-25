@@ -6,9 +6,10 @@ catalog:
   vite-plus: 0.3.0
 overrides:
   vite: "catalog:"
-onlyBuiltDependencies:
-  - esbuild
-  - workerd
+allowBuilds:
+  core-js-pure: set this to true or false
+  esbuild: true
+  workerd: true
 peerDependencyRules:
   allowAny:
     - vite
