@@ -82,4 +82,46 @@ Mechanics:
   one `..`; after moving two levels deep they needed `../..`.
 
 **Result:** `vp test` 81/81 files (906 tests), `astro check` 0 errors, build +
-integration suites pass. Full-gate rerun pending — see `docs/plan.md`.
+integration suites pass. Local `CI=true vp run verify` serial-green on Node 24.19.0 + pnpm 11.13.1 (see §7–§8); full CI awaited via PR.
+
+## 7. Toolchain — Node 24 (Active LTS)
+
+**Context:** Node 22 Maintenance LTS EOL ~Apr 2027; Node 24 Krypton is Active LTS (v24.19.0). `--experimental-strip-types` (22.6+) unchanged in 24.x — no script changes.
+
+**Decision:**
+
+- `package.json` `engines.node: ">=22.18.0"` → `">=24.11.0"`
+- `README.md:18` `Requires Node ≥ 22.12` → `≥ 24.11`
+- `docs/development.md:7` same
+- `docs/decisions.md §6` `Node ≥22.6` → `≥24.11` (history kept)
+- `.github/workflows/ci.yml:28,100` `node-version: 22` → `24` (both `verify` and `themes` jobs)
+
+**Verification:** `node -v` `v24.19.0` via `vp`, `vp install` clean, serial `vp run verify` green after clearing orphaned `workerd`/`wrangler dev` on `127.0.0.1:8791` (`pkill -9`, `ss -tln` empty). CI via PR.
+
+## 8. Toolchain — pnpm 11.13.1 (pure ESM, SQLite store)
+
+**Context:** pnpm 10.34.5 → 11.13.1. v11 requires Node ≥22 (we have 24), switches to ESM, SQLite store, tightens defaults (`minimumReleaseAge: 1440`, `blockExoticSubdeps: true`, `strictDepBuilds: true`). `lockfileVersion` stays `9.0`.
+
+**Decision:**
+
+- `pnpm-workspace.yaml` `onlyBuiltDependencies: [esbuild, workerd]` → `allowBuilds: { esbuild: true, workerd: true }`
+- `package.json` + `mcp/package.json` `packageManager: pnpm@10.34.5` → `pnpm@11.13.1`, `devEngines.packageManager.version` likewise
+- No `.node-version` (per instruction), no `.npmrc` split needed
+- Lockfile regenerated via `CI=true vp install` — diff only `@pnpm/exe` + platform packages (e.g. `linuxstatic-*`, `@reflink/*`, `detect-libc`), `vp --version` now `pnpm v11.13.1` + `Node v24.19.0`
+- Codemod `vp dlx codemod run pnpm-v10-to-v11` requires TTY (`Failed to get user input: The input device is not a TTY`), so manual fallback applied above
+
+**Result:** `vp run verify` green on Node 24 serially; `pnpm-lock.yaml` store metadata only.
+
+## 9. Deploy — `minshop` instance provisioned (2026-08-25)
+
+**Context:** `wrangler.jsonc` committed as placeholder (no `database_id`); remote `minshop-db` did not exist (`wrangler d1 migrations list DB --remote` → "Couldn't find a D1 DB named 'minshop-db'"). Direct `vp run deploy` would fail; protected `main` also rejects direct pushes.
+
+**Decision / provision:**
+
+- Fixed `scripts/db/provision-cf.sh`: `ROOT` was `$(dirname "$0")/..` → `../..` after reorg (was resolving to `scripts/`), theme import `themes.mjs` → `themes.ts` with `--experimental-strip-types` (post-`.mjs→.ts` conversion)
+- Ran `bash scripts/db/provision-cf.sh minshop` — created D1 `minshop-db` `764e0369-8373-49ae-af4e-74a2fc930254`, R2 `minshop-images` + `minshop-files`, applied 40 migrations remote, built and deployed Worker `https://minshop.zeldrisho.workers.dev` (version `1be39b55-fe43-47ae-9434-67dbfead0fcb`, also `SESSION` KV `4590812f008247f3a7724f1e68beee82`)
+- `openssl` missing from image — generated `AUTH_SECRET` + `SECRETS_KEK` via `node:crypto` and set with `printf '%s' "$SECRET" | vp exec -- wrangler secret put <NAME>` (both uploaded). Metadata saved to `.instances/minshop.env` (gitignored).
+- Smoke: `GET /` and `/search` correctly `302 /admin/setup` pre-onboarding, `GET /api/health` `{"status":"ok","db":"ok"}`, `POST /api/checkout` validates body.
+- Verified locally: `db/migrations` additive, `resolveTheme()` → `default`, `wrangler.jsonc` template-rendered, `mcp:check` dry-run passes. Branch `chore/toolchain-node24-pnpm11` pushed for PR; `main` reset to `origin/main` to respect protection rules.
+
+**Follow-up:** PR CI must go green, then finish smoke after admin setup (`/admin/setup` → products/checkout/pay/webhooks/images), monitor observability, and optionally `mcp:deploy`.
