@@ -23,7 +23,7 @@ if [[ ! "$SLUG" =~ ^[a-z][a-z0-9-]{1,40}$ ]]; then
   exit 1
 fi
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 W="vp exec wrangler"
 DB_NAME="${SLUG}-db"
@@ -40,8 +40,8 @@ trap restore EXIT
 # Read-only — a broken config/theme.config.json used to surface only after the
 # database and bucket already existed on the account.
 echo "▸ [0/5] Validating theme selection…"
-node --input-type=module -e "
-  import { resolveTheme } from './scripts/theme/themes.mjs';
+node --experimental-strip-types --input-type=module -e "
+  import { resolveTheme } from './scripts/theme/themes.ts';
   const s = resolveTheme();
   console.log('    theme: ' + s.id + ' (from ' + s.source + ')');
 "
