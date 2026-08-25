@@ -52,7 +52,6 @@
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^26.2.0",
     "miniflare": "^4.20260730.0",
-    "oxlint": "1.79.0",
     "tailwindcss": "^4.3.1",
     "typescript": "^6.0.3",
     "vite": "catalog:",
@@ -63,7 +62,7 @@
     "miniflare": {
       "undici": "^7.29.0"
     },
-    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.9"
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.3.0"
   },
   "devEngines": {
     "packageManager": {
@@ -71,6 +70,9 @@
       "version": "10.34.5",
       "onFail": "download"
     }
+  },
+  "engines": {
+    "node": ">=22.12"
   },
   "packageManager": "pnpm@10.34.5"
 }
