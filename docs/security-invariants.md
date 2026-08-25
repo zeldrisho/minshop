@@ -31,4 +31,4 @@
 
 ## Reporting
 
-See `SECURITY.md`. Use GitHub private advisory (`Report a vulnerability`) or email `dev@daniel-yang.com`. Do not open a public issue for exploitable findings. Never include real keys, tokens, or customer data in reports.
+Use GitHub private advisory (`Report a vulnerability`) or email `dev@daniel-yang.com`. Do not open a public issue for exploitable findings. Never include real keys, tokens, or customer data in reports.
